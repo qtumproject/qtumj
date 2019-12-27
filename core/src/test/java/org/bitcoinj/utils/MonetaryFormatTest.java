@@ -31,7 +31,7 @@ import org.bitcoinj.core.Coin;
 
 public class MonetaryFormatTest {
 
-    private static final MonetaryFormat NO_CODE = MonetaryFormat.BTC.noCode();
+    private static final MonetaryFormat NO_CODE = MonetaryFormat.QTUM.noCode();
 
     @Test
     public void testSigns() throws Exception {
@@ -211,19 +211,19 @@ public class MonetaryFormatTest {
 
     @Test
     public void standardCodes() throws Exception {
-        assertEquals("BTC 0.00", MonetaryFormat.BTC.format(Coin.ZERO).toString());
-        assertEquals("mBTC 0.00", MonetaryFormat.MBTC.format(Coin.ZERO).toString());
-        assertEquals("µBTC 0", MonetaryFormat.UBTC.format(Coin.ZERO).toString());
+        assertEquals("QTUM 0.00", MonetaryFormat.QTUM.format(Coin.ZERO).toString());
+        assertEquals("mQTUM 0.00", MonetaryFormat.MQTUM.format(Coin.ZERO).toString());
+        assertEquals("µQTUM 0", MonetaryFormat.UQTUM.format(Coin.ZERO).toString());
     }
 
     @Test
     public void standardSymbol() throws Exception {
-        assertEquals(MonetaryFormat.SYMBOL_BTC + " 0.00", new MonetaryFormat(true).format(Coin.ZERO).toString());
+        assertEquals(MonetaryFormat.SYMBOL_QTUM + " 0.00", new MonetaryFormat(true).format(Coin.ZERO).toString());
     }
 
     @Test
     public void customCode() throws Exception {
-        assertEquals("dBTC 0", MonetaryFormat.UBTC.code(1, "dBTC").shift(1).format(Coin.ZERO).toString());
+        assertEquals("dQTUM 0", MonetaryFormat.UQTUM.code(1, "dQTUM").shift(1).format(Coin.ZERO).toString());
     }
 
     /**
@@ -231,25 +231,25 @@ public class MonetaryFormatTest {
      */
     @Test
     public void noCode() throws Exception {
-        assertEquals("0", MonetaryFormat.UBTC.noCode().shift(0).format(Coin.ZERO).toString());
+        assertEquals("0", MonetaryFormat.UQTUM.noCode().shift(0).format(Coin.ZERO).toString());
         // Ensure that inserting a code after codes are wiped, works
-        assertEquals("dBTC 0", MonetaryFormat.UBTC.noCode().code(1, "dBTC").shift(1).format(Coin.ZERO).toString());
+        assertEquals("dQTUM 0", MonetaryFormat.UQTUM.noCode().code(1, "dQTUM").shift(1).format(Coin.ZERO).toString());
     }
 
     @Test
     public void codeOrientation() throws Exception {
-        assertEquals("BTC 0.00", MonetaryFormat.BTC.prefixCode().format(Coin.ZERO).toString());
-        assertEquals("0.00 BTC", MonetaryFormat.BTC.postfixCode().format(Coin.ZERO).toString());
+        assertEquals("QTUM 0.00", MonetaryFormat.QTUM.prefixCode().format(Coin.ZERO).toString());
+        assertEquals("0.00 QTUM", MonetaryFormat.QTUM.postfixCode().format(Coin.ZERO).toString());
     }
 
     @Test
     public void codeSeparator() throws Exception {
-        assertEquals("BTC@0.00", MonetaryFormat.BTC.codeSeparator('@').format(Coin.ZERO).toString());
+        assertEquals("QTUM@0.00", MonetaryFormat.QTUM.codeSeparator('@').format(Coin.ZERO).toString());
     }
 
     @Test(expected = NumberFormatException.class)
     public void missingCode() throws Exception {
-        MonetaryFormat.UBTC.shift(1).format(Coin.ZERO);
+        MonetaryFormat.UQTUM.shift(1).format(Coin.ZERO);
     }
 
     @Test
@@ -279,19 +279,19 @@ public class MonetaryFormatTest {
 
         assertEquals(Coin.CENT, NO_CODE.parse(".01"));
 
-        assertEquals(Coin.MILLICOIN, MonetaryFormat.MBTC.parse("1"));
-        assertEquals(Coin.MILLICOIN, MonetaryFormat.MBTC.parse("1.0"));
-        assertEquals(Coin.MILLICOIN, MonetaryFormat.MBTC.parse("01.0000000000"));
-        assertEquals(Coin.MILLICOIN, MonetaryFormat.MBTC.positiveSign('+').parse("+1.0"));
-        assertEquals(Coin.MILLICOIN.negate(), MonetaryFormat.MBTC.parse("-1"));
-        assertEquals(Coin.MILLICOIN.negate(), MonetaryFormat.MBTC.parse("-1.0"));
+        assertEquals(Coin.MILLICOIN, MonetaryFormat.MQTUM.parse("1"));
+        assertEquals(Coin.MILLICOIN, MonetaryFormat.MQTUM.parse("1.0"));
+        assertEquals(Coin.MILLICOIN, MonetaryFormat.MQTUM.parse("01.0000000000"));
+        assertEquals(Coin.MILLICOIN, MonetaryFormat.MQTUM.positiveSign('+').parse("+1.0"));
+        assertEquals(Coin.MILLICOIN.negate(), MonetaryFormat.MQTUM.parse("-1"));
+        assertEquals(Coin.MILLICOIN.negate(), MonetaryFormat.MQTUM.parse("-1.0"));
 
-        assertEquals(Coin.MICROCOIN, MonetaryFormat.UBTC.parse("1"));
-        assertEquals(Coin.MICROCOIN, MonetaryFormat.UBTC.parse("1.0"));
-        assertEquals(Coin.MICROCOIN, MonetaryFormat.UBTC.parse("01.0000000000"));
-        assertEquals(Coin.MICROCOIN, MonetaryFormat.UBTC.positiveSign('+').parse("+1.0"));
-        assertEquals(Coin.MICROCOIN.negate(), MonetaryFormat.UBTC.parse("-1"));
-        assertEquals(Coin.MICROCOIN.negate(), MonetaryFormat.UBTC.parse("-1.0"));
+        assertEquals(Coin.MICROCOIN, MonetaryFormat.UQTUM.parse("1"));
+        assertEquals(Coin.MICROCOIN, MonetaryFormat.UQTUM.parse("1.0"));
+        assertEquals(Coin.MICROCOIN, MonetaryFormat.UQTUM.parse("01.0000000000"));
+        assertEquals(Coin.MICROCOIN, MonetaryFormat.UQTUM.positiveSign('+').parse("+1.0"));
+        assertEquals(Coin.MICROCOIN.negate(), MonetaryFormat.UQTUM.parse("-1"));
+        assertEquals(Coin.MICROCOIN.negate(), MonetaryFormat.UQTUM.parse("-1.0"));
 
         assertEquals(Coin.CENT, NO_CODE.withLocale(new Locale("hi", "IN")).parse(".०१")); // Devanagari
     }

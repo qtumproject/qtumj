@@ -1,6 +1,6 @@
 /*
  * Copyright by the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,7 +17,6 @@
 package org.bitcoinj.core;
 
 import com.google.common.collect.ImmutableList;
-import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
@@ -67,7 +66,7 @@ public class TransactionOutputTest extends TestWithWallet {
 
     @Test
     public void testP2SHOutputScript() throws Exception {
-        String P2SHAddressString = "35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU";
+        String P2SHAddressString = "MUWEsZbNQiMXqxHAifTVCm7hK69vLHU42a";
         Address P2SHAddress = LegacyAddress.fromBase58(MAINNET, P2SHAddressString);
         Script script = ScriptBuilder.createOutputScript(P2SHAddress);
         Transaction tx = new Transaction(MAINNET);

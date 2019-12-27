@@ -139,13 +139,13 @@ public class WalletProtobufSerializerTest {
         assertEquals(2, t1copy.getConfidence().numBroadcastPeers());
         assertNotNull(t1copy.getConfidence().getLastBroadcastedAt());
         assertEquals(TransactionConfidence.Source.NETWORK, t1copy.getConfidence().getSource());
-        
+
         Protos.Wallet walletProto = new WalletProtobufSerializer().walletToProto(myWallet);
         assertEquals(Protos.Key.Type.ORIGINAL, walletProto.getKey(0).getType());
         assertEquals(0, walletProto.getExtensionCount());
         assertEquals(1, walletProto.getTransactionCount());
         assertEquals(6, walletProto.getKeyCount());
-        
+
         Protos.Transaction t1p = walletProto.getTransaction(0);
         assertEquals(0, t1p.getBlockHashCount());
         assertArrayEquals(t1.getTxId().getBytes(), t1p.getHash().toByteArray());
@@ -187,7 +187,7 @@ public class WalletProtobufSerializerTest {
         // TODO: Wallet should store overriding transactions even if they are not wallet-relevant.
         // assertEquals(doubleSpends.t2, t1.getConfidence().getOverridingTransaction());
     }
-    
+
     @Test
     public void testKeys() throws Exception {
         for (int i = 0 ; i < 20 ; i++) {

@@ -52,10 +52,10 @@ public class PeerAddressTest {
     public void roundtrip_ipv4_currentProtocolVersion() throws Exception {
         long time = Utils.currentTimeSeconds();
         PeerAddress pa = new PeerAddress(MAINNET, InetAddress.getByName("1.2.3.4"), 1234,
-                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion(), BigInteger.ZERO);
+                NetworkParameters.ProtocolVersion.CURRENT.getQtumProtocolVersion(), BigInteger.ZERO);
         byte[] serialized = pa.bitcoinSerialize();
         PeerAddress pa2 = new PeerAddress(MAINNET, serialized, 0,
-                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+                NetworkParameters.ProtocolVersion.CURRENT.getQtumProtocolVersion());
         assertEquals("1.2.3.4", pa2.getAddr().getHostAddress());
         assertEquals(1234, pa2.getPort());
         assertEquals(BigInteger.ZERO, pa2.getServices());
@@ -77,10 +77,10 @@ public class PeerAddressTest {
     public void roundtrip_ipv6_currentProtocolVersion() throws Exception {
         long time = Utils.currentTimeSeconds();
         PeerAddress pa = new PeerAddress(MAINNET, InetAddress.getByName("2001:db8:85a3:0:0:8a2e:370:7334"), 1234,
-                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion(), BigInteger.ZERO);
+                NetworkParameters.ProtocolVersion.CURRENT.getQtumProtocolVersion(), BigInteger.ZERO);
         byte[] serialized = pa.bitcoinSerialize();
         PeerAddress pa2 = new PeerAddress(MAINNET, serialized, 0,
-                NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+                NetworkParameters.ProtocolVersion.CURRENT.getQtumProtocolVersion());
         assertEquals("2001:db8:85a3:0:0:8a2e:370:7334", pa2.getAddr().getHostAddress());
         assertEquals(1234, pa2.getPort());
         assertEquals(BigInteger.ZERO, pa2.getServices());

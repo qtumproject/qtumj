@@ -576,7 +576,7 @@ public class TransactionTest {
 
         public HugeDeclaredSizeTransaction(NetworkParameters params, boolean hackInputsSize, boolean hackOutputsSize, boolean hackWitnessPushCountSize) {
             super(params);
-            this.protocolVersion = NetworkParameters.ProtocolVersion.WITNESS_VERSION.getBitcoinProtocolVersion();
+            this.protocolVersion = NetworkParameters.ProtocolVersion.WITNESS_VERSION.getQtumProtocolVersion();
             Transaction inputTx = new Transaction(params);
             inputTx.addOutput(Coin.FIFTY_COINS, LegacyAddress.fromKey(params, ECKey.fromPrivate(BigInteger.valueOf(123456))));
             this.addInput(inputTx.getOutput(0));

@@ -82,7 +82,7 @@ public class VersionTallyTest {
             assertEquals(i, instance.getCountAtOrAbove(2).intValue());
             instance.add(2);
         }
- 
+
         // Inject a rogue 1
         instance.add(1);
         assertEquals(UNITTEST.getMajorityWindow() - 1, instance.getCountAtOrAbove(2).intValue());

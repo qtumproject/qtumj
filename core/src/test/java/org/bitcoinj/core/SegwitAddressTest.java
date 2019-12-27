@@ -54,12 +54,12 @@ public class SegwitAddressTest {
 
     @Test
     public void example_p2wpkh_mainnet() {
-        String bech32 = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4";
+        String bech32 = "qc1qgcsd8tpj7k23k8grqx8lapx4aadr6hw5j6mp7t";
 
         SegwitAddress address = SegwitAddress.fromBech32(MAINNET, bech32);
 
         assertEquals(MAINNET, address.params);
-        assertEquals("0014751e76e8199196d454941c45d1b3a323f1433bd6",
+        assertEquals("00144620d3ac32f5951b1d03018ffe84d5ef5a3d5dd4",
                 Utils.HEX.encode(ScriptBuilder.createOutputScript(address).getProgram()));
         assertEquals(ScriptType.P2WPKH, address.getOutputScriptType());
         assertEquals(bech32.toLowerCase(Locale.ROOT), address.toBech32());
@@ -68,12 +68,12 @@ public class SegwitAddressTest {
 
     @Test
     public void example_p2wsh_mainnet() {
-        String bech32 = "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3";
+        String bech32 = "qc1qzmm28nnuzuraja3r9dfdxxt98t95mx296tkt6t43tguvpn4sr6jq89z4zq";
 
         SegwitAddress address = SegwitAddress.fromBech32(MAINNET, bech32);
 
         assertEquals(MAINNET, address.params);
-        assertEquals("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262",
+        assertEquals("002016f6a3ce7c1707d976232b52d319653acb4d9945d2ecbd2eb15a38c0ceb01ea4",
                 Utils.HEX.encode(ScriptBuilder.createOutputScript(address).getProgram()));
         assertEquals(ScriptType.P2WSH, address.getOutputScriptType());
         assertEquals(bech32.toLowerCase(Locale.ROOT), address.toBech32());
@@ -82,12 +82,12 @@ public class SegwitAddressTest {
 
     @Test
     public void example_p2wpkh_testnet() {
-        String bech32 = "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx";
+        String bech32 = "tq1q9enzluvtyylwpaq5m9m3hhdp3csqprnhx0hdax";
 
         SegwitAddress address = SegwitAddress.fromBech32(TESTNET, bech32);
 
         assertEquals(TESTNET, address.params);
-        assertEquals("0014751e76e8199196d454941c45d1b3a323f1433bd6",
+        assertEquals("00142e662ff18b213ee0f414d9771bdda18e20008e77",
                 Utils.HEX.encode(ScriptBuilder.createOutputScript(address).getProgram()));
         assertEquals(ScriptType.P2WPKH, address.getOutputScriptType());
         assertEquals(bech32.toLowerCase(Locale.ROOT), address.toBech32());
@@ -96,12 +96,12 @@ public class SegwitAddressTest {
 
     @Test
     public void example_p2wsh_testnet() {
-        String bech32 = "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7";
+        String bech32 = "tq1qvv80p4lufat6m7gnrsjutvs5vcyx7e3prtyt09wj9mxm7rt55mtsqsnl50";
 
         SegwitAddress address = SegwitAddress.fromBech32(TESTNET, bech32);
 
         assertEquals(TESTNET, address.params);
-        assertEquals("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262",
+        assertEquals("0020630ef0d7fc4f57adf9131c25c5b21466086f66211ac8b795d22ecdbf0d74a6d7",
                 Utils.HEX.encode(ScriptBuilder.createOutputScript(address).getProgram()));
         assertEquals(ScriptType.P2WSH, address.getOutputScriptType());
         assertEquals(bech32.toLowerCase(Locale.ROOT), address.toBech32());
@@ -148,15 +148,15 @@ public class SegwitAddressTest {
     }
 
     private static AddressData[] VALID_ADDRESSES = {
-            new AddressData("BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4", MAINNET,
+            new AddressData("QC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KQ52AT0", MAINNET,
                     "0014751e76e8199196d454941c45d1b3a323f1433bd6", 0),
-            new AddressData("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7", TESTNET,
+            new AddressData("tq1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qucc3th", TESTNET,
                     "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262", 0),
-            new AddressData("bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx", MAINNET,
+            new AddressData("qc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k9s9n7l", MAINNET,
                     "5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6", 1),
-            new AddressData("BC1SW50QA3JX3S", MAINNET, "6002751e", 16),
-            new AddressData("bc1zw508d6qejxtdg4y5r3zarvaryvg6kdaj", MAINNET, "5210751e76e8199196d454941c45d1b3a323", 2),
-            new AddressData("tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy", TESTNET,
+            new AddressData("QC1SW50QE9VY82", MAINNET, "6002751e", 16),
+            new AddressData("qc1zw508d6qejxtdg4y5r3zarvaryvgkvh09", MAINNET, "5210751e76e8199196d454941c45d1b3a323", 2),
+            new AddressData("tq1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesswsl2d", TESTNET,
                     "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433", 0) };
 
     @Test
@@ -173,30 +173,30 @@ public class SegwitAddressTest {
 
     private static String[] INVALID_ADDRESSES = { //
             "tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty", // Invalid human-readable part
-            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", // Invalid checksum
-            "BC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2", // Invalid witness version
-            "bc1rw5uspcuh", // Invalid program length
-            "bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90", // Invalid program length
-            "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P", // Invalid program length for witness version 0 (per BIP141)
-            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7", // Mixed case
-            "bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du", // Zero padding of more than 4 bits
-            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv", // Non-zero padding in 8-to-5 conversion
-            "bc1gmk9yu", // Empty data section
+            "qc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", // Invalid checksum
+            "QC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KLXVZFS", // Invalid witness version
+            "qc1rw5zrsf3y", // Invalid program length
+            "qc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw56attdf", // Invalid program length
+            "QC1QR508D6QEJXTDG4Y5R3ZARVARYV9TJGHK", // Invalid program length for witness version 0 (per BIP141)
+            "tq1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qucC3th", // Mixed case
+            "qc1zw508d6qejxtdg4y5r3zarvaryvqgcnr6u", // Zero padding of more than 4 bits
+            "tq1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3ppwvyk9", // Non-zero padding in 8-to-5 conversion
+            "qc1lqpudd", // Empty data section
     };
 
     @Test(expected = AddressFormatException.InvalidDataLength.class)
     public void fromBech32_version0_invalidLength() {
-        SegwitAddress.fromBech32(null, "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P");
+        SegwitAddress.fromBech32(null, "QC1QR508D6QEJXTDG4Y5R3ZARVARYV9TJGHK");
     }
 
     @Test(expected = AddressFormatException.InvalidDataLength.class)
     public void fromBech32_tooShort() {
-        SegwitAddress.fromBech32(null, "bc1rw5uspcuh");
+        SegwitAddress.fromBech32(null, "qc1rw5zrsf3y");
     }
 
     @Test(expected = AddressFormatException.InvalidDataLength.class)
     public void fromBech32_tooLong() {
-        SegwitAddress.fromBech32(null, "bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90");
+        SegwitAddress.fromBech32(null, "qc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw56attdf");
     }
 
     @Test(expected = AddressFormatException.InvalidPrefix.class)
@@ -211,7 +211,7 @@ public class SegwitAddressTest {
 
     @Test
     public void testJavaSerialization() throws Exception {
-        SegwitAddress address = SegwitAddress.fromBech32(null, "BC1SW50QA3JX3S");
+        SegwitAddress address = SegwitAddress.fromBech32(null, "QC1SW50QE9VY82");
 
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(address);

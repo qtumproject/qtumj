@@ -81,7 +81,7 @@ public class ScriptTest {
         Script pubkey = new Script(pubkeyBytes);
         assertEquals("DUP HASH160 PUSHDATA(20)[33e81a941e64cda12c6a299ed322ddbdd03f8d0e] EQUALVERIFY CHECKSIG", pubkey.toString());
         Address toAddr = LegacyAddress.fromPubKeyHash(TESTNET, ScriptPattern.extractHashFromP2PKH(pubkey));
-        assertEquals("mkFQohBpy2HDXrCwyMrYL5RtfrmeiuuPY2", toAddr.toString());
+        assertEquals("qNHqffsRMeT6tkTjC8rQhCsyLQ694rDvzP", toAddr.toString());
     }
 
     @Test
@@ -112,7 +112,7 @@ public class ScriptTest {
 
     @Test
     public void testP2SHOutputScript() throws Exception {
-        Address p2shAddress = LegacyAddress.fromBase58(MAINNET, "35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU");
+        Address p2shAddress = LegacyAddress.fromBase58(MAINNET, "MBoJEmPExSegFaqyRmqfjWpbw5wCkEQ4Bz");
         assertTrue(ScriptPattern.isP2SH(ScriptBuilder.createOutputScript(p2shAddress)));
     }
 
@@ -122,7 +122,7 @@ public class ScriptTest {
         Script s = new Script(bytes);
         assertTrue(ScriptPattern.isP2PK(s));
     }
-    
+
     @Test
     public void testCreateMultiSigInputScript() {
         // Setup transaction and signatures
@@ -134,7 +134,7 @@ public class ScriptTest {
         Transaction transaction = TESTNET.getDefaultSerializer().makeTransaction(bytes);
         TransactionOutput output = transaction.getOutput(1);
         Transaction spendTx = new Transaction(TESTNET);
-        Address address = LegacyAddress.fromBase58(TESTNET, "n3CFiCmBXVt5d3HXKQ15EFZyhPz4yj5F3H");
+        Address address = LegacyAddress.fromBase58(TESTNET, "qRAGAemcGKAjaTJbWBUnB8Hycg4qh4g85Y");
         Script outputScript = ScriptBuilder.createOutputScript(address);
         spendTx.addOutput(output.getValue(), outputScript);
         spendTx.addInput(output);
@@ -235,7 +235,7 @@ public class ScriptTest {
 
     private Script parseScriptString(String string) throws IOException {
         String[] words = string.split("[ \\t\\n]");
-        
+
         UnsafeByteArrayOutputStream out = new UnsafeByteArrayOutputStream();
 
         for(String w : words) {
@@ -263,9 +263,9 @@ public class ScriptTest {
                 out.write(ScriptOpCodes.getOpCode(w.substring(3)));
             } else {
                 throw new RuntimeException("Invalid word: '" + w + "'");
-            }                        
+            }
         }
-        
+
         return new Script(out.toByteArray());
     }
 

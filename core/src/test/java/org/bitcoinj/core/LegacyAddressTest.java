@@ -56,14 +56,14 @@ public class LegacyAddressTest {
 
     @Test
     public void testJavaSerialization() throws Exception {
-        LegacyAddress testAddress = LegacyAddress.fromBase58(TESTNET, "n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
+        LegacyAddress testAddress = LegacyAddress.fromBase58(TESTNET, "qRAGAemcGKAjaTJbWBUnB8Hycg4qh4g85Y");
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(testAddress);
         LegacyAddress testAddressCopy = (LegacyAddress) new ObjectInputStream(new ByteArrayInputStream(os.toByteArray()))
                 .readObject();
         assertEquals(testAddress, testAddressCopy);
 
-        LegacyAddress mainAddress = LegacyAddress.fromBase58(MAINNET, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        LegacyAddress mainAddress = LegacyAddress.fromBase58(MAINNET, "QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
         os = new ByteArrayOutputStream();
         new ObjectOutputStream(os).writeObject(mainAddress);
         LegacyAddress mainAddressCopy = (LegacyAddress) new ObjectInputStream(new ByteArrayInputStream(os.toByteArray()))
@@ -74,22 +74,22 @@ public class LegacyAddressTest {
     @Test
     public void stringification() {
         // Test a testnet address.
-        LegacyAddress a = LegacyAddress.fromPubKeyHash(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
-        assertEquals("n4eA2nbYqErp7H6jebchxAN59DmNpksexv", a.toString());
+        LegacyAddress a = LegacyAddress.fromPubKeyHash(TESTNET, HEX.decode("53619ad2a51d5a7139b6056f5c44955cbdc2a575"));
+        assertEquals("qRAGAemcGKAjaTJbWBUnB8Hycg4qh4g85Y", a.toString());
         assertEquals(ScriptType.P2PKH, a.getOutputScriptType());
 
-        LegacyAddress b = LegacyAddress.fromPubKeyHash(MAINNET, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
-        assertEquals("17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL", b.toString());
+        LegacyAddress b = LegacyAddress.fromPubKeyHash(MAINNET, HEX.decode("cc5e9334b41fb5d557cff0eaacf252bc4cae1950"));
+        assertEquals("QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE", b.toString());
         assertEquals(ScriptType.P2PKH, b.getOutputScriptType());
     }
 
     @Test
     public void decoding() {
-        LegacyAddress a = LegacyAddress.fromBase58(TESTNET, "n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
-        assertEquals("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc", Utils.HEX.encode(a.getHash()));
+        LegacyAddress a = LegacyAddress.fromBase58(TESTNET, "qRAGAemcGKAjaTJbWBUnB8Hycg4qh4g85Y");
+        assertEquals("53619ad2a51d5a7139b6056f5c44955cbdc2a575", Utils.HEX.encode(a.getHash()));
 
-        LegacyAddress b = LegacyAddress.fromBase58(MAINNET, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
-        assertEquals("4a22c3c4cbb31e4d03b15550636762bda0baf85a", Utils.HEX.encode(b.getHash()));
+        LegacyAddress b = LegacyAddress.fromBase58(MAINNET, "QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
+        assertEquals("cc5e9334b41fb5d557cff0eaacf252bc4cae1950", Utils.HEX.encode(b.getHash()));
     }
 
     @Test
@@ -116,7 +116,7 @@ public class LegacyAddressTest {
 
         // Check the case of a mismatched network.
         try {
-            LegacyAddress.fromBase58(TESTNET, "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+            LegacyAddress.fromBase58(TESTNET, "QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
             fail();
         } catch (AddressFormatException.WrongNetwork e) {
             // Success.
@@ -127,9 +127,9 @@ public class LegacyAddressTest {
 
     @Test
     public void getNetwork() {
-        NetworkParameters params = LegacyAddress.getParametersFromAddress("17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        NetworkParameters params = LegacyAddress.getParametersFromAddress("QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
         assertEquals(MAINNET.getId(), params.getId());
-        params = LegacyAddress.getParametersFromAddress("n4eA2nbYqErp7H6jebchxAN59DmNpksexv");
+        params = LegacyAddress.getParametersFromAddress("qRAGAemcGKAjaTJbWBUnB8Hycg4qh4g85Y");
         assertEquals(TESTNET.getId(), params.getId());
     }
 
@@ -151,7 +151,7 @@ public class LegacyAddressTest {
         NetworkParameters params = LegacyAddress.getParametersFromAddress("LLxSnHLN2CYyzB5eWTR9K9rS9uWtbTQFb6");
         assertEquals(altNetwork.getId(), params.getId());
         // Check if main network works as before
-        params = LegacyAddress.getParametersFromAddress("17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL");
+        params = LegacyAddress.getParametersFromAddress("QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
         assertEquals(MAINNET.getId(), params.getId());
         // Unregister network
         Networks.unregister(altNetwork);
@@ -164,45 +164,45 @@ public class LegacyAddressTest {
     @Test
     public void p2shAddress() {
         // Test that we can construct P2SH addresses
-        LegacyAddress mainNetP2SHAddress = LegacyAddress.fromBase58(MainNetParams.get(), "35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU");
+        LegacyAddress mainNetP2SHAddress = LegacyAddress.fromBase58(MainNetParams.get(), "MUWEsZbNQiMXqxHAifTVCm7hK69vLHU42a");
         assertEquals(mainNetP2SHAddress.getVersion(), MAINNET.p2shHeader);
         assertEquals(ScriptType.P2SH, mainNetP2SHAddress.getOutputScriptType());
-        LegacyAddress testNetP2SHAddress = LegacyAddress.fromBase58(TestNet3Params.get(), "2MuVSxtfivPKJe93EC1Tb9UhJtGhsoWEHCe");
+        LegacyAddress testNetP2SHAddress = LegacyAddress.fromBase58(TestNet3Params.get(), "mNqb1uX2qQMnjgWXFRyrWj4q9us1K4upFj");
         assertEquals(testNetP2SHAddress.getVersion(), TESTNET.p2shHeader);
         assertEquals(ScriptType.P2SH, testNetP2SHAddress.getOutputScriptType());
 
         // Test that we can determine what network a P2SH address belongs to
-        NetworkParameters mainNetParams = LegacyAddress.getParametersFromAddress("35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU");
+        NetworkParameters mainNetParams = LegacyAddress.getParametersFromAddress("MUWEsZbNQiMXqxHAifTVCm7hK69vLHU42a");
         assertEquals(MAINNET.getId(), mainNetParams.getId());
-        NetworkParameters testNetParams = LegacyAddress.getParametersFromAddress("2MuVSxtfivPKJe93EC1Tb9UhJtGhsoWEHCe");
+        NetworkParameters testNetParams = LegacyAddress.getParametersFromAddress("mNqb1uX2qQMnjgWXFRyrWj4q9us1K4upFj");
         assertEquals(TESTNET.getId(), testNetParams.getId());
 
         // Test that we can convert them from hashes
-        byte[] hex = HEX.decode("2ac4b0b501117cc8119c5797b519538d4942e90e");
+        byte[] hex = HEX.decode("e204f2a2c2a50972a3527bd187147ca49979da3f");
         LegacyAddress a = LegacyAddress.fromScriptHash(MAINNET, hex);
-        assertEquals("35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU", a.toString());
-        LegacyAddress b = LegacyAddress.fromScriptHash(TESTNET, HEX.decode("18a0e827269b5211eb51a4af1b2fa69333efa722"));
-        assertEquals("2MuVSxtfivPKJe93EC1Tb9UhJtGhsoWEHCe", b.toString());
+        assertEquals("MUWEsZbNQiMXqxHAifTVCm7hK69vLHU42a", a.toString());
+        LegacyAddress b = LegacyAddress.fromScriptHash(TESTNET, HEX.decode("490c00ac413d5fbb39c8fa46064a016abfc5cadb"));
+        assertEquals("mNqb1uX2qQMnjgWXFRyrWj4q9us1K4upFj", b.toString());
         LegacyAddress c = LegacyAddress.fromScriptHash(MAINNET,
                 ScriptPattern.extractHashFromP2SH(ScriptBuilder.createP2SHOutputScript(hex)));
-        assertEquals("35b9vsyH1KoFT5a5KtrKusaCcPLkiSo1tU", c.toString());
+        assertEquals("MUWEsZbNQiMXqxHAifTVCm7hK69vLHU42a", c.toString());
     }
 
     @Test
     public void p2shAddressCreationFromKeys() {
         // import some keys from this example: https://gist.github.com/gavinandresen/3966071
-        ECKey key1 = DumpedPrivateKey.fromBase58(MAINNET, "5JaTXbAUmfPYZFRwrYaALK48fN6sFJp4rHqq2QSXs8ucfpE4yQU").getKey();
+        ECKey key1 = DumpedPrivateKey.fromBase58(MAINNET, "Kwypcvc619wYZ7yPB53znrBTNNyc91jX5j5DRSBpjDktb9UHCaKM").getKey();
         key1 = ECKey.fromPrivate(key1.getPrivKeyBytes());
-        ECKey key2 = DumpedPrivateKey.fromBase58(MAINNET, "5Jb7fCeh1Wtm4yBBg3q3XbT6B525i17kVhy3vMC9AqfR6FH2qGk").getKey();
+        ECKey key2 = DumpedPrivateKey.fromBase58(MAINNET, "KzczwzukDAjaXJ7avmia7BmTGEpFN5fvpRUU1RHnuXvtBcchAHUE").getKey();
         key2 = ECKey.fromPrivate(key2.getPrivKeyBytes());
-        ECKey key3 = DumpedPrivateKey.fromBase58(MAINNET, "5JFjmGo5Fww9p8gvx48qBYDJNAzR9pmH5S389axMtDyPT8ddqmw").getKey();
+        ECKey key3 = DumpedPrivateKey.fromBase58(MAINNET, "Ky3bJEZ3J1nqn9VydTaWrVTthgQf9JCWVBRNbxTDnVhm2o4e2KAU").getKey();
         key3 = ECKey.fromPrivate(key3.getPrivKeyBytes());
 
         List<ECKey> keys = Arrays.asList(key1, key2, key3);
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(2, keys);
         LegacyAddress address = LegacyAddress.fromScriptHash(MAINNET,
                 ScriptPattern.extractHashFromP2SH(p2shScript));
-        assertEquals("3N25saC4dT24RphDAwLtD8LUN4E2gZPJke", address.toString());
+        assertEquals("MUWEsZbNQiMXqxHAifTVCm7hK69vLHU42a", address.toString());
     }
 
     @Test
@@ -216,13 +216,13 @@ public class LegacyAddressTest {
 
     @Test
     public void roundtripBase58() {
-        String base58 = "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL";
+        String base58 = "QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE";
         assertEquals(base58, LegacyAddress.fromBase58(null, base58).toBase58());
     }
 
     @Test
     public void comparisonCloneEqualTo() throws Exception {
-        LegacyAddress a = LegacyAddress.fromBase58(MAINNET, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+        LegacyAddress a = LegacyAddress.fromBase58(MAINNET, "Qeqn1rv8WmZMBPiQEV8y2n7pciTDim25mY");
         LegacyAddress b = a.clone();
 
         int result = a.compareTo(b);
@@ -231,8 +231,8 @@ public class LegacyAddressTest {
 
     @Test
     public void comparisonLessThan() {
-        LegacyAddress a = LegacyAddress.fromBase58(MAINNET, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
-        LegacyAddress b = LegacyAddress.fromBase58(MAINNET, "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P");
+        LegacyAddress a = LegacyAddress.fromBase58(MAINNET, "Qeqn1rv8WmZMBPiQEV8y2n7pciTDim25mY");
+        LegacyAddress b = LegacyAddress.fromBase58(MAINNET, "QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
 
         int result = a.compareTo(b);
         assertTrue(result < 0);
@@ -240,8 +240,8 @@ public class LegacyAddressTest {
 
     @Test
     public void comparisonGreaterThan() {
-        LegacyAddress a = LegacyAddress.fromBase58(MAINNET, "1EXoDusjGwvnjZUyKkxZ4UHEf77z6A5S4P");
-        LegacyAddress b = LegacyAddress.fromBase58(MAINNET, "1Dorian4RoXcnBv9hnQ4Y2C1an6NJ4UrjX");
+        LegacyAddress a = LegacyAddress.fromBase58(MAINNET, "QfEbFcvEE6B3scHAb7UaARaWLKxYXCSxNE");
+        LegacyAddress b = LegacyAddress.fromBase58(MAINNET, "Qeqn1rv8WmZMBPiQEV8y2n7pciTDim25mY");
 
         int result = a.compareTo(b);
         assertTrue(result > 0);

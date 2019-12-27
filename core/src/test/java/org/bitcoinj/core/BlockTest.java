@@ -72,7 +72,7 @@ public class BlockTest {
     public void testBlockVerification() throws Exception {
         block700000.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
     }
-    
+
     @SuppressWarnings("deprecation")
     @Test
     public void testDate() throws Exception {
@@ -138,7 +138,7 @@ public class BlockTest {
         // NB: This tests the bitcoin serialization protocol.
         assertArrayEquals(block700000Bytes, block700000.bitcoinSerialize());
     }
-    
+
     @Test
     public void testUpdateLength() {
         Block block = UNITTEST.getGenesisBlock().createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, new ECKey().getPubKey(), Block.BLOCK_HEIGHT_GENESIS);

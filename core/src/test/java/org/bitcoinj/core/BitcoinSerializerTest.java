@@ -79,7 +79,7 @@ public class BitcoinSerializerTest {
     @Test
     public void testCachedParsing() throws Exception {
         MessageSerializer serializer = MAINNET.getSerializer(true);
-        
+
         // first try writing to a fields to ensure uncaching and children are not affected
         Transaction transaction = (Transaction) serializer.deserialize(ByteBuffer.wrap(TRANSACTION_MESSAGE_BYTES));
         assertNotNull(transaction);

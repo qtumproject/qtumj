@@ -204,7 +204,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // Create a couple of peers.
         InboundMessageQueuer p1 = connectPeer(1);
         InboundMessageQueuer p2 = connectPeer(2);
-        
+
         // Check the peer accessors.
         assertEquals(2, peerGroup.numConnectedPeers());
         Set<Peer> tmp = new HashSet<>(peerGroup.getConnectedPeers());
@@ -234,7 +234,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         assertEquals(value, wallet.getBalance(Wallet.BalanceType.ESTIMATED));
     }
 
-    
+
     @Test
     public void receiveTxBroadcastOnAddedWallet() throws Exception {
         // Check that when we receive transactions on all our peers, we do the right thing.
@@ -242,11 +242,11 @@ public class PeerGroupTest extends TestWithPeerGroup {
 
         // Create a peer.
         InboundMessageQueuer p1 = connectPeer(1);
-        
+
         Wallet wallet2 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2PKH);
         ECKey key2 = wallet2.freshReceiveKey();
         Address address2 = LegacyAddress.fromKey(UNITTEST, key2);
-        
+
         peerGroup.addWallet(wallet2);
         blockChain.addWallet(wallet2);
 
@@ -268,7 +268,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         pingAndWait(p1);
         assertEquals(value, wallet2.getBalance(Wallet.BalanceType.ESTIMATED));
     }
-    
+
     @Test
     public void singleDownloadPeer1() throws Exception {
         // Check that we don't attempt to retrieve blocks on multiple peers.
@@ -292,7 +292,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         // Only peer 1 tries to download it.
         inbound(p1, inv);
         pingAndWait(p1);
-        
+
         assertTrue(outbound(p1) instanceof GetDataMessage);
         assertNull(outbound(p2));
         // Peer 1 goes away, peer 2 becomes the download peer and thus queries the remote mempool.
@@ -335,7 +335,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         inv.addBlock(b1);
         inv.addBlock(b2);
         inv.addBlock(b3);
-        
+
         inbound(p1, inv);
         assertTrue(outbound(p1) instanceof GetDataMessage);
         // We hand back the first block.
@@ -440,7 +440,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.start();
         peerGroup.setPingIntervalMsec(0);
         VersionMessage versionMessage = new VersionMessage(UNITTEST, 2);
-        versionMessage.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getBitcoinProtocolVersion();
+        versionMessage.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getQtumProtocolVersion();
         versionMessage.localServices = VersionMessage.NODE_NETWORK;
         connectPeer(1, versionMessage);
         peerGroup.waitForPeers(1).get();
@@ -452,7 +452,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.start();
         peerGroup.setPingIntervalMsec(100);
         VersionMessage versionMessage = new VersionMessage(UNITTEST, 2);
-        versionMessage.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getBitcoinProtocolVersion();
+        versionMessage.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getQtumProtocolVersion();
         versionMessage.localServices = VersionMessage.NODE_NETWORK;
         InboundMessageQueuer p1 = connectPeer(1, versionMessage);
         Ping ping = (Ping) waitForOutbound(p1);
@@ -469,10 +469,10 @@ public class PeerGroupTest extends TestWithPeerGroup {
     public void downloadPeerSelection() throws Exception {
         peerGroup.start();
         VersionMessage v1 = new VersionMessage(UNITTEST, 2);
-        v1.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getBitcoinProtocolVersion();
+        v1.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getQtumProtocolVersion();
         v1.localServices = VersionMessage.NODE_NETWORK;
         VersionMessage v2 = new VersionMessage(UNITTEST, 4);
-        v2.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getBitcoinProtocolVersion();
+        v2.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getQtumProtocolVersion();
         v2.localServices = VersionMessage.NODE_NETWORK;
         assertNull(peerGroup.getDownloadPeer());
 

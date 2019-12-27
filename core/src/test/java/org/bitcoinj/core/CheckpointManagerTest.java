@@ -59,7 +59,7 @@ public class CheckpointManagerTest {
         expect(params.getSerializer(false)).andReturn(
                 new BitcoinSerializer(params, false));
         expect(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT))
-                .andReturn(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+                .andReturn(NetworkParameters.ProtocolVersion.CURRENT.getQtumProtocolVersion());
         replay(params);
         new CheckpointManager(params, null);
     }
