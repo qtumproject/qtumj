@@ -41,7 +41,7 @@ import static org.bitcoinj.core.Sha256Hash.*;
  *
  * <p>To get a block, you can either build one from the raw bytes you can get from another implementation, or request one
  * specifically using {@link Peer#getBlock(Sha256Hash)}, or grab one from a downloaded {@link BlockChain}.</p>
- * 
+ *
  * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class Block extends Message {
@@ -57,7 +57,7 @@ public class Block extends Message {
     private static final Logger log = LoggerFactory.getLogger(Block.class);
 
     /** How many bytes are required to represent a block header WITHOUT the trailing 00 length byte. */
-    public static final int HEADER_SIZE = 80;
+    public static final int HEADER_SIZE_WITHOUT_SIGNATURE = 180;
 
     static final long ALLOWED_TIME_DRIFT = 2 * 60 * 60; // Same value as Bitcoin Core.
 
@@ -66,7 +66,7 @@ public class Block extends Message {
      * upgrade everyone to change this, so Bitcoin can continue to grow. For now it exists as an anti-DoS measure to
      * avoid somebody creating a titanically huge but valid block and forcing everyone to download/store it forever.
      */
-    public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
+    public static final int MAX_BLOCK_SIZE = 2 * 1000 * 1000;
     /**
      * A "sigop" is a signature verification operation. Because they're expensive we also impose a separate limit on
      * the number in a block to prevent somebody mining a huge block that has way more sigops than normal, so is very
@@ -75,7 +75,7 @@ public class Block extends Message {
     public static final int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
 
     /** A value for difficultyTarget (nBits) that allows half of all possible hash solutions. Used in unit testing. */
-    public static final long EASIEST_DIFFICULTY_TARGET = 0x207fFFFFL;
+    public static final long EASIEST_DIFFICULTY_TARGET = 0x1f00ffffL;
 
     /** Value to use if the block height is unknown */
     public static final int BLOCK_HEIGHT_UNKNOWN = -1;
@@ -93,10 +93,16 @@ public class Block extends Message {
     // Fields defined as part of the protocol format.
     private long version;
     private Sha256Hash prevBlockHash;
-    private Sha256Hash merkleRoot, witnessRoot;
+    private Sha256Hash merkleRoot, witnessRoot, hashStateRoot, stakePrevTxid;
+    private KeccakHash hashUtxoRoot;
+    private long stakeOutputIndex;
     private long time;
     private long difficultyTarget; // "nBits"
     private long nonce;
+
+    private byte[] signature;
+
+    private int headerSize;
 
     // If null, it means this object holds only the headers.
     @VisibleForTesting
@@ -107,7 +113,7 @@ public class Block extends Message {
 
     protected boolean headerBytesValid;
     protected boolean transactionBytesValid;
-    
+
     // Blocks can be encoded in a way that will use more bytes than is optimal (due to VarInts having multiple encodings)
     // MAX_BLOCK_SIZE must be compared to the optimal encoding, not the actual encoding, so when parsing, we keep track
     // of the size of the ideal encoding in addition to the actual message size (which Message needs)
@@ -121,8 +127,13 @@ public class Block extends Message {
         difficultyTarget = 0x1d07fff8L;
         time = Utils.currentTimeSeconds();
         prevBlockHash = Sha256Hash.ZERO_HASH;
+        hashStateRoot = Sha256Hash.ZERO_HASH;
+        stakePrevTxid = Sha256Hash.ZERO_HASH;
+        hashUtxoRoot = KeccakHash.ZERO_HASH;
+        signature = new byte[0];
+        updateHeaderSize();
 
-        length = HEADER_SIZE;
+        length = headerSize;
     }
 
     /**
@@ -222,14 +233,14 @@ public class Block extends Message {
 
     /**
      * Parse transactions from the block.
-     * 
+     *
      * @param transactionsOffset Offset of the transactions within the block.
      * Useful for non-Bitcoin chains where the block header may not be a fixed
      * size.
      */
     protected void parseTransactions(final int transactionsOffset) throws ProtocolException {
         cursor = transactionsOffset;
-        optimalEncodingMessageSize = HEADER_SIZE;
+        optimalEncodingMessageSize = getHeaderSize();
         if (payload.length == cursor) {
             // This message is just a header, it has no transactions.
             transactionBytesValid = false;
@@ -260,14 +271,21 @@ public class Block extends Message {
         time = readUint32();
         difficultyTarget = readUint32();
         nonce = readUint32();
+        hashStateRoot = Sha256Hash.wrap(readBytes(32));
+        hashUtxoRoot = KeccakHash.wrap(readBytes(32));
+        stakePrevTxid = readHash();
+        stakeOutputIndex = readUint32();
+        signature = readByteArray();
+        updateHeaderSize();
+
         hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(payload, offset, cursor - offset));
         headerBytesValid = serializer.isParseRetainMode();
 
         // transactions
-        parseTransactions(offset + HEADER_SIZE);
+        parseTransactions(offset + getHeaderSize());
         length = cursor - offset;
     }
-    
+
     public int getOptimalEncodingMessageSize() {
         if (optimalEncodingMessageSize != 0)
             return optimalEncodingMessageSize;
@@ -278,8 +296,8 @@ public class Block extends Message {
     // default for testing
     void writeHeader(OutputStream stream) throws IOException {
         // try for cached write first
-        if (headerBytesValid && payload != null && payload.length >= offset + HEADER_SIZE) {
-            stream.write(payload, offset, HEADER_SIZE);
+        if (headerBytesValid && payload != null && payload.length >= offset + getHeaderSize()) {
+            stream.write(payload, offset, getHeaderSize());
             return;
         }
         // fall back to manual write
@@ -289,6 +307,15 @@ public class Block extends Message {
         Utils.uint32ToByteStreamLE(time, stream);
         Utils.uint32ToByteStreamLE(difficultyTarget, stream);
         Utils.uint32ToByteStreamLE(nonce, stream);
+
+        stream.write(hashStateRoot.getBytes());
+        stream.write(hashUtxoRoot.getBytes());
+        stream.write(stakePrevTxid.getReversedBytes());
+        Utils.uint32ToByteStreamLE(stakeOutputIndex, stream);
+
+        VarInt signatureLength = new VarInt(signature.length);
+        stream.write(signatureLength.encode());
+        stream.write(signature);
     }
 
     private void writeTransactions(OutputStream stream) throws IOException {
@@ -300,7 +327,7 @@ public class Block extends Message {
 
         // confirmed we must have transactions either cached or as objects.
         if (transactionBytesValid && payload != null && payload.length >= offset + length) {
-            stream.write(payload, offset + HEADER_SIZE, length - HEADER_SIZE);
+            stream.write(payload, offset + getHeaderSize(), length - getHeaderSize());
             return;
         }
 
@@ -331,7 +358,7 @@ public class Block extends Message {
 
         // At least one of the two cacheable components is invalid
         // so fall back to stream write since we can't be sure of the length.
-        ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length == UNKNOWN_LENGTH ? HEADER_SIZE + guessTransactionsLength() : length);
+        ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length == UNKNOWN_LENGTH ? getHeaderSize() + guessTransactionsLength() : length);
         try {
             writeHeader(stream);
             writeTransactions(stream);
@@ -358,7 +385,7 @@ public class Block extends Message {
      */
     private int guessTransactionsLength() {
         if (transactionBytesValid)
-            return payload.length - HEADER_SIZE;
+            return payload.length - getHeaderSize();
         if (transactions == null)
             return 0;
         int len = VarInt.sizeOf(transactions.size());
@@ -401,7 +428,7 @@ public class Block extends Message {
      */
     private Sha256Hash calculateHash() {
         try {
-            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(getHeaderSize());
             writeHeader(bos);
             return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
         } catch (IOException e) {
@@ -465,6 +492,13 @@ public class Block extends Message {
         block.difficultyTarget = difficultyTarget;
         block.transactions = null;
         block.hash = getHash();
+
+        block.hashStateRoot = hashStateRoot;
+        block.stakePrevTxid = stakePrevTxid;
+        block.hashUtxoRoot = hashUtxoRoot;
+        block.stakeOutputIndex = stakeOutputIndex;
+        block.signature = signature;
+        block.updateHeaderSize();
     }
 
     /**
@@ -542,14 +576,16 @@ public class Block extends Message {
         // field is of the right value. This requires us to have the preceding blocks.
         BigInteger target = getDifficultyTargetAsInteger();
 
-        BigInteger h = getHash().toBigInteger();
-        if (h.compareTo(target) > 0) {
-            // Proof of work check failed!
-            if (throwException)
-                throw new VerificationException("Hash is higher than target: " + getHashAsString() + " vs "
-                        + target.toString(16));
-            else
-                return false;
+        if (!isPOS()) {
+            BigInteger h = getHash().toBigInteger();
+            if (h.compareTo(target) > 0) {
+                // Proof of work check failed!
+                if (throwException)
+                    throw new VerificationException("Hash is higher than target: " + getHashAsString() + " vs "
+                            + target.toString(16));
+                else
+                    return false;
+            }
         }
         return true;
     }
@@ -785,6 +821,47 @@ public class Block extends Message {
         hash = null;
     }
 
+    public Sha256Hash getHashStateRoot() {
+        return hashStateRoot;
+    }
+
+    public void setHashStateRoot(Sha256Hash hashStateRoot) {
+        this.hashStateRoot = hashStateRoot;
+    }
+
+    public KeccakHash getHashUtxoRoot() {
+        return hashUtxoRoot;
+    }
+
+    public void setHashUtxoRoot(KeccakHash hashUtxoRoot) {
+        this.hashUtxoRoot = hashUtxoRoot;
+    }
+
+    public Sha256Hash getStakePrevTxid() {
+        return stakePrevTxid;
+    }
+
+    public void setStakePrevTxid(Sha256Hash stakePrevTxid) {
+        this.stakePrevTxid = stakePrevTxid;
+    }
+
+    public long getStakeOutputIndex() {
+        return stakeOutputIndex;
+    }
+
+    public void setStakeOutputIndex(long stakeOutputIndex) {
+        this.stakeOutputIndex = stakeOutputIndex;
+    }
+
+    public byte[] getSignature() {
+        return signature;
+    }
+
+    public void setSignature(byte[] signature) {
+        this.signature = signature;
+        updateHeaderSize();
+    }
+
     /**
      * Returns the witness root in big endian form, calculating it from transactions if necessary.
      */
@@ -891,6 +968,14 @@ public class Block extends Message {
         this.hash = null;
     }
 
+    private void updateHeaderSize() {
+        headerSize = HEADER_SIZE_WITHOUT_SIGNATURE + VarInt.sizeOf(signature.length) + signature.length;
+    }
+
+    public int getHeaderSize() {
+        return headerSize;
+    }
+
     /** Returns an immutable list of transactions held in this block, or null if this object represents just a header. */
     @Nullable
     public List<Transaction> getTransactions() {
@@ -904,7 +989,7 @@ public class Block extends Message {
     private static int txCounter;
 
     /** Adds a coinbase transaction to the block. This exists for unit tests.
-     * 
+     *
      * @param height block height, if known, or -1 otherwise.
      */
     @VisibleForTesting
@@ -950,7 +1035,7 @@ public class Block extends Message {
     /**
      * Returns a solved block that builds on top of this one. This exists for unit tests.
      * In this variant you can specify a public key (pubkey) for use in generating coinbase blocks.
-     * 
+     *
      * @param height block height, if known, or -1 otherwise.
      */
     Block createNextBlock(@Nullable final Address to, final long version,
@@ -1043,7 +1128,7 @@ public class Block extends Message {
 
     /**
      * Return whether this block contains any transactions.
-     * 
+     *
      * @return  true if the block contains transactions, false otherwise (is
      * purely a header).
      */
@@ -1073,5 +1158,9 @@ public class Block extends Message {
      */
     public boolean isBIP65() {
         return version >= BLOCK_VERSION_BIP65;
+    }
+
+    public boolean isPOS() {
+        return !stakePrevTxid.equals(Sha256Hash.ZERO_HASH) || stakeOutputIndex != 0xffffffffL;
     }
 }

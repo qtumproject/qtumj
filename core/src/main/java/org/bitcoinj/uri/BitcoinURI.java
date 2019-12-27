@@ -1,6 +1,6 @@
 /*
  * Copyright 2012, 2014 the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,7 +20,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.AbstractBitcoinNetParams;
+import org.bitcoinj.params.AbstractQtumNetParams;
 
 import javax.annotation.Nullable;
 
@@ -38,7 +38,7 @@ import java.util.Map;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * <p>Provides a standard implementation of a Bitcoin URI with support for the following:</p>
+ * <p>Provides a standard implementation of a Qtum URI with support for the following:</p>
  *
  * <ul>
  * <li>URLEncoded URIs (as passed in by IE on the command line)</li>
@@ -50,8 +50,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <p>The following input forms are accepted:</p>
  *
  * <ul>
- * <li>{@code bitcoin:<address>}</li>
- * <li>{@code bitcoin:<address>?<name1>=<value1>&<name2>=<value2>} with multiple
+ * <li>{@code qtum:<address>}</li>
+ * <li>{@code qtum:<address>?<name1>=<value1>&<name2>=<value2>} with multiple
  * additional name/value pairs</li>
  * </ul>
  *
@@ -70,7 +70,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <li>{@code label} any URL encoded alphanumeric</li>
  * <li>{@code message} any URL encoded alphanumeric</li>
  * </ul>
- * 
+ *
  * @author Andreas Schildbach (initial code)
  * @author Jim Burton (enhancements for MultiBit)
  * @author Gary Rowe (BIP21 support)
@@ -85,12 +85,12 @@ public class BitcoinURI {
     public static final String FIELD_PAYMENT_REQUEST_URL = "r";
 
     /**
-     * URI for Bitcoin network. Use {@link AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
-     * need Bitcoin, or use {@link NetworkParameters#getUriScheme} to get the scheme
+     * URI for Qtum network. Use {@link AbstractQtumNetParams#QTUM_SCHEME} if you specifically
+     * need Qtum, or use {@link NetworkParameters#getUriScheme} to get the scheme
      * from network parameters.
      */
     @Deprecated
-    public static final String BITCOIN_SCHEME = "bitcoin";
+    public static final String QTUM_SCHEME = "qtum";
     private static final String ENCODED_SPACE_CHARACTER = "%20";
     private static final String AMPERSAND_SEPARATOR = "&";
     private static final String QUESTION_MARK_SEPARATOR = "?";
@@ -101,7 +101,7 @@ public class BitcoinURI {
     private final Map<String, Object> parameterMap = new LinkedHashMap<>();
 
     /**
-     * Constructs a new BitcoinURI from the given string. Can be for any network.
+     * Constructs a new QtumURI from the given string. Can be for any network.
      *
      * @param uri The raw URI data to be parsed (see class comments for accepted formats)
      * @throws BitcoinURIParseException if the URI is not syntactically or semantically valid.
@@ -111,19 +111,19 @@ public class BitcoinURI {
     }
 
     /**
-     * Constructs a new object by trying to parse the input as a valid Bitcoin URI.
+     * Constructs a new object by trying to parse the input as a valid Qtum URI.
      *
      * @param params The network parameters that determine which network the URI is from, or null if you don't have
      *               any expectation about what network the URI is for and wish to check yourself.
      * @param input The raw URI data to be parsed (see class comments for accepted formats)
      *
-     * @throws BitcoinURIParseException If the input fails Bitcoin URI syntax and semantic checks.
+     * @throws BitcoinURIParseException If the input fails Qtum URI syntax and semantic checks.
      */
     public BitcoinURI(@Nullable NetworkParameters params, String input) throws BitcoinURIParseException {
         checkNotNull(input);
 
         String scheme = null == params
-            ? AbstractBitcoinNetParams.BITCOIN_SCHEME
+            ? AbstractQtumNetParams.QTUM_SCHEME
             : params.getUriScheme();
 
         // Attempt to form the URI (fail fast syntax checking to official standards).
@@ -134,13 +134,13 @@ public class BitcoinURI {
             throw new BitcoinURIParseException("Bad URI syntax", e);
         }
 
-        // URI is formed as  bitcoin:<address>?<query parameters>
-        // blockchain.info generates URIs of non-BIP compliant form bitcoin://address?....
+        // URI is formed as  qtum:<address>?<query parameters>
+        // blockchain.info generates URIs of non-BIP compliant form qtum://address?....
         // We support both until Ben fixes his code.
-        
-        // Remove the bitcoin scheme.
+
+        // Remove the qtum scheme.
         // (Note: getSchemeSpecificPart() is not used as it unescapes the label and parse then fails.
-        // For instance with : bitcoin:129mVqKUmJ9uwPxKJBnNdABbuaaNfho4Ha?amount=0.06&label=Tom%20%26%20Jerry
+        // For instance with : qtum:129mVqKUmJ9uwPxKJBnNdABbuaaNfho4Ha?amount=0.06&label=Tom%20%26%20Jerry
         // the & (%26) in Tom and Jerry gets interpreted as a separator and the label then gets parsed
         // as 'Tom ' instead of 'Tom & Jerry')
         String blockchainInfoScheme = scheme + "://";
@@ -158,7 +158,7 @@ public class BitcoinURI {
         // Split off the address from the rest of the query parameters.
         String[] addressSplitTokens = schemeSpecificPart.split("\\?", 2);
         if (addressSplitTokens.length == 0)
-            throw new BitcoinURIParseException("No data found after the bitcoin: prefix");
+            throw new BitcoinURIParseException("No data found after the qtum: prefix");
         String addressToken = addressSplitTokens[0];  // may be empty!
 
         String[] nameValuePairTokens;
@@ -174,7 +174,7 @@ public class BitcoinURI {
         parseParameters(params, addressToken, nameValuePairTokens);
 
         if (!addressToken.isEmpty()) {
-            // Attempt to parse the addressToken as a Bitcoin address for this network
+            // Attempt to parse the addressToken as a Qtum address for this network
             try {
                 Address address = Address.fromString(params, addressToken);
                 putWithValidation(FIELD_ADDRESS, address);
@@ -198,10 +198,10 @@ public class BitcoinURI {
         for (String nameValuePairToken : nameValuePairTokens) {
             final int sepIndex = nameValuePairToken.indexOf('=');
             if (sepIndex == -1)
-                throw new BitcoinURIParseException("Malformed Bitcoin URI - no separator in '" +
+                throw new BitcoinURIParseException("Malformed Qtum URI - no separator in '" +
                         nameValuePairToken + "'");
             if (sepIndex == 0)
-                throw new BitcoinURIParseException("Malformed Bitcoin URI - empty name '" +
+                throw new BitcoinURIParseException("Malformed Qtum URI - empty name '" +
                         nameValuePairToken + "'");
             final String nameToken = nameValuePairToken.substring(0, sepIndex).toLowerCase(Locale.ENGLISH);
             final String valueToken = nameValuePairToken.substring(sepIndex + 1);
@@ -243,7 +243,7 @@ public class BitcoinURI {
 
     /**
      * Put the value against the key in the map checking for duplication. This avoids address field overwrite etc.
-     * 
+     *
      * @param key The key for the map
      * @param value The value to store
      */
@@ -256,7 +256,7 @@ public class BitcoinURI {
     }
 
     /**
-     * The Bitcoin address from the URI, if one was present. It's possible to have Bitcoin URI's with no address if a
+     * The Qtum address from the URI, if one was present. It's possible to have Qtum URI's with no address if a
      * r= payment protocol parameter is specified, though this form is not recommended as older wallets can't understand
      * it.
      */
@@ -323,7 +323,7 @@ public class BitcoinURI {
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder("BitcoinURI[");
+        StringBuilder builder = new StringBuilder("QtumURI[");
         boolean first = true;
         for (Map.Entry<String, Object> entry : parameterMap.entrySet()) {
             if (first) {
@@ -338,31 +338,31 @@ public class BitcoinURI {
     }
 
     /**
-     * Simple Bitcoin URI builder using known good fields.
+     * Simple Qtum URI builder using known good fields.
      *
-     * @param address The Bitcoin address
+     * @param address The Qtum address
      * @param amount The amount
      * @param label A label
      * @param message A message
-     * @return A String containing the Bitcoin URI
+     * @return A String containing the Qtum URI
      */
-    public static String convertToBitcoinURI(Address address, Coin amount,
+    public static String convertToQtumURI(Address address, Coin amount,
                                              String label, String message) {
-        return convertToBitcoinURI(address.getParameters(), address.toString(), amount, label, message);
+        return convertToQtumURI(address.getParameters(), address.toString(), amount, label, message);
     }
 
     /**
-     * Simple Bitcoin URI builder using known good fields.
+     * Simple Qtum URI builder using known good fields.
      *
      * @param params The network parameters that determine which network the URI
      * is for.
-     * @param address The Bitcoin address
+     * @param address The Qtum address
      * @param amount The amount
      * @param label A label
      * @param message A message
-     * @return A String containing the Bitcoin URI
+     * @return A String containing the Qtum URI
      */
-    public static String convertToBitcoinURI(NetworkParameters params,
+    public static String convertToQtumURI(NetworkParameters params,
                                              String address, @Nullable Coin amount,
                                              @Nullable String label, @Nullable String message) {
         checkNotNull(params);
@@ -370,29 +370,29 @@ public class BitcoinURI {
         if (amount != null && amount.signum() < 0) {
             throw new IllegalArgumentException("Coin must be positive");
         }
-        
+
         StringBuilder builder = new StringBuilder();
         String scheme = params.getUriScheme();
         builder.append(scheme).append(":").append(address);
-        
+
         boolean questionMarkHasBeenOutput = false;
-        
+
         if (amount != null) {
             builder.append(QUESTION_MARK_SEPARATOR).append(FIELD_AMOUNT).append("=");
             builder.append(amount.toPlainString());
             questionMarkHasBeenOutput = true;
         }
-        
+
         if (label != null && !"".equals(label)) {
             if (questionMarkHasBeenOutput) {
                 builder.append(AMPERSAND_SEPARATOR);
             } else {
-                builder.append(QUESTION_MARK_SEPARATOR);                
+                builder.append(QUESTION_MARK_SEPARATOR);
                 questionMarkHasBeenOutput = true;
             }
             builder.append(FIELD_LABEL).append("=").append(encodeURLString(label));
         }
-        
+
         if (message != null && !"".equals(message)) {
             if (questionMarkHasBeenOutput) {
                 builder.append(AMPERSAND_SEPARATOR);
@@ -401,13 +401,13 @@ public class BitcoinURI {
             }
             builder.append(FIELD_MESSAGE).append("=").append(encodeURLString(message));
         }
-        
+
         return builder.toString();
     }
 
     /**
      * Encode a string using URL encoding
-     * 
+     *
      * @param stringToEncode The string to URL encode
      */
     static String encodeURLString(String stringToEncode) {

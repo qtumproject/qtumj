@@ -17,24 +17,14 @@
 
 package org.bitcoinj.params;
 
-import java.math.BigInteger;
-import java.util.Date;
-
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.store.BlockStore;
-import org.bitcoinj.store.BlockStoreException;
-
 import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Parameters for the testnet, a separate public instance of Bitcoin that has relaxed rules suitable for development
  * and testing of applications and new Bitcoin versions.
  */
-public class TestNet3Params extends AbstractBitcoinNetParams {
+public class TestNet3Params extends AbstractQtumNetParams {
     public static final int TESTNET_MAJORITY_WINDOW = 100;
     public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 75;
     public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 51;
@@ -42,31 +32,39 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     public TestNet3Params() {
         super();
         id = ID_TESTNET;
-        packetMagic = 0x0b110907;
+        packetMagic = 0x0d221506;
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
-        maxTarget = Utils.decodeCompactBits(0x1d00ffffL);
-        port = 18333;
-        addressHeader = 111;
-        p2shHeader = 196;
+        targetTimespanV2 = TARGET_TIMESPAN_V2;
+        intervalV2 = INTERVAL_V2;
+        targetSpacing = 128;
+        powNoRetargeting = true;
+        posNoRetargeting = false;
+        maxTarget = Utils.decodeCompactBits(0x1f00ffffL);
+        posMaxTarget = Utils.decodeCompactBits(0x1f00ffffL);
+        qip9POSMaxTarget = Utils.decodeCompactBits(0x1a1fffffL);
+        qip9Height = 446320;
+        port = 13888;
+        addressHeader = 120;
+        p2shHeader = 110;
         dumpedPrivateKeyHeader = 239;
-        segwitAddressHrp = "tb";
-        genesisBlock.setTime(1296688602L);
-        genesisBlock.setDifficultyTarget(0x1d00ffffL);
-        genesisBlock.setNonce(414098458);
-        spendableCoinbaseDepth = 100;
-        subsidyDecreaseBlockCount = 210000;
+        segwitAddressHrp = "tq";
+        genesisBlock.setTime(1504695029L);
+        genesisBlock.setDifficultyTarget(0x1f00ffffL);
+        genesisBlock.setNonce(7349697);
+
+        spendableCoinbaseDepth = 500;
+        subsidyDecreaseBlockCount = 985500;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"));
+        checkState(genesisHash.equals("0000e803ee215c0684ca0d2f9220594d3f828617972aad66feb2ba51f5e14222"));
         alertSigningKey = Utils.HEX.decode("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");
 
         dnsSeeds = new String[] {
-                "testnet-seed.bitcoin.jonasschnelli.ch", // Jonas Schnelli
-                "seed.tbtc.petertodd.org",               // Peter Todd
-                "seed.testnet.bitcoin.sprovoost.nl",     // Sjors Provoost
-                "testnet-seed.bluematt.me",              // Matt Corallo
+                "qtum4.dynu.net",
         };
-        addrSeeds = null;
+        // These are in big-endian format, which is what the SeedPeers code expects.
+        // Updated Dec. 17th 2019
+        addrSeeds = new int[] { 0x23c5eb1c, 0x68c605dc, 0x23c5840a, 0x23c2485f, };
         bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
         bip32HeaderP2PKHpriv = 0x04358394; // The 4 byte header that serializes in base58 to "tprv"
         bip32HeaderP2WPKHpub = 0x045f1cf6; // The 4 byte header that serializes in base58 to "vpub".
@@ -88,40 +86,5 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     @Override
     public String getPaymentProtocolId() {
         return PAYMENT_PROTOCOL_ID_TESTNET;
-    }
-
-    // February 16th 2012
-    private static final Date testnetDiffDate = new Date(1329264000000L);
-
-    @Override
-    public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-        final BlockStore blockStore) throws VerificationException, BlockStoreException {
-        if (!isDifficultyTransitionPoint(storedPrev.getHeight()) && nextBlock.getTime().after(testnetDiffDate)) {
-            Block prev = storedPrev.getHeader();
-
-            // After 15th February 2012 the rules on the testnet change to avoid people running up the difficulty
-            // and then leaving, making it too hard to mine a block. On non-difficulty transition points, easy
-            // blocks are allowed if there has been a span of 20 minutes without one.
-            final long timeDelta = nextBlock.getTimeSeconds() - prev.getTimeSeconds();
-            // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
-            // goes backwards.
-            if (timeDelta >= 0 && timeDelta <= NetworkParameters.TARGET_SPACING * 2) {
-                // Walk backwards until we find a block that doesn't have the easiest proof of work, then check
-                // that difficulty is equal to that one.
-                StoredBlock cursor = storedPrev;
-                while (!cursor.getHeader().equals(getGenesisBlock()) &&
-                           cursor.getHeight() % getInterval() != 0 &&
-                           cursor.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
-                        cursor = cursor.getPrev(blockStore);
-                BigInteger cursorTarget = cursor.getHeader().getDifficultyTargetAsInteger();
-                BigInteger newTarget = nextBlock.getDifficultyTargetAsInteger();
-                if (!cursorTarget.equals(newTarget))
-                        throw new VerificationException("Testnet block transition that is not allowed: " +
-                        Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
-                        Long.toHexString(nextBlock.getDifficultyTarget()));
-            }
-        } else {
-            super.checkDifficultyTransitions(storedPrev, nextBlock, blockStore);
-        }
     }
 }

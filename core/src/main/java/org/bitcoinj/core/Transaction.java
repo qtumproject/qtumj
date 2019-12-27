@@ -1421,7 +1421,7 @@ public class Transaction extends ChildMessage {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         boolean useSegwit = hasWitnesses()
-                && protocolVersion >= NetworkParameters.ProtocolVersion.WITNESS_VERSION.getBitcoinProtocolVersion();
+                && protocolVersion >= NetworkParameters.ProtocolVersion.WITNESS_VERSION.getQtumProtocolVersion();
         bitcoinSerializeToStream(stream, useSegwit);
     }
 

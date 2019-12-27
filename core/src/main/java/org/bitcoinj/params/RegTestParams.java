@@ -26,23 +26,37 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Network parameters for the regression test mode of bitcoind in which all blocks are trivially solvable.
  */
-public class RegTestParams extends AbstractBitcoinNetParams {
+public class RegTestParams extends AbstractQtumNetParams {
     private static final BigInteger MAX_TARGET = new BigInteger("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
 
     public RegTestParams() {
         super();
-        packetMagic = 0xfabfb5daL;
-        addressHeader = 111;
-        p2shHeader = 196;
+        id = ID_REGTEST;
+        packetMagic = 0xfdddc6e1L;
+        interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
+        targetTimespanV2 = TARGET_TIMESPAN_V2;
+        intervalV2 = INTERVAL_V2;
+        targetSpacing = 128;
+        powNoRetargeting = true;
+        posNoRetargeting = true;
+        maxTarget = MAX_TARGET;
+        posMaxTarget = MAX_TARGET;
+        qip9POSMaxTarget = MAX_TARGET;
+        qip9Height = 0;
+        port = 23888;
+        addressHeader = 120;
+        p2shHeader = 110;
         dumpedPrivateKeyHeader = 239;
-        segwitAddressHrp = "bcrt";
-        genesisBlock.setTime(1296688602L);
-        genesisBlock.setDifficultyTarget(0x1d07fff8L);
-        genesisBlock.setNonce(384568319);
-        spendableCoinbaseDepth = 100;
+        segwitAddressHrp = "qcrt";
+        genesisBlock.setTime(1504695029);
+        genesisBlock.setDifficultyTarget(0x207fffffL);
+        genesisBlock.setNonce(17);
+
+        spendableCoinbaseDepth = 500;
+        subsidyDecreaseBlockCount = 150;
         String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008"));
+        checkState(genesisHash.equals("665ed5b402ac0b44efc37d8926332994363e8a7278b7ee9a58fb972efadae943"));
         dnsSeeds = null;
         addrSeeds = null;
         bip32HeaderP2PKHpub = 0x043587cf; // The 4 byte header that serializes in base58 to "tpub".
@@ -53,11 +67,6 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         // Difficulty adjustments are disabled for regtest.
         // By setting the block interval for difficulty adjustments to Integer.MAX_VALUE we make sure difficulty never
         // changes.
-        interval = Integer.MAX_VALUE;
-        maxTarget = MAX_TARGET;
-        subsidyDecreaseBlockCount = 150;
-        port = 18444;
-        id = ID_REGTEST;
 
         majorityEnforceBlockUpgrade = MainNetParams.MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MainNetParams.MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;

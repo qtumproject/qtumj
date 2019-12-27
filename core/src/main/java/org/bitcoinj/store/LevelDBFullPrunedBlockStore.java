@@ -56,7 +56,7 @@ import com.google.common.base.Stopwatch;
  * <p>
  * An implementation of a Fully Pruned Block Store using a leveldb implementation as the backing data store.
  * </p>
- * 
+ *
  * <p>
  * Includes number of caches to optimise the initial blockchain download.
  * </p>

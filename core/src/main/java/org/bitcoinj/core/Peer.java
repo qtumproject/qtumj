@@ -515,6 +515,12 @@ public class Peer extends PeerSocketHandler {
             log.error("{} {}: Received {}", this, getPeerVersionMessage().subVer, m);
         } else if (m instanceof SendHeadersMessage) {
             // We ignore this message, because we don't announce new blocks.
+        } else if (m instanceof SendCmpctMessage) {
+            // We ignore this message for now
+            // TODO: implement if necessary
+        } else if (m instanceof FeeFilterMessage) {
+            // We ignore this message for now
+            // TODO: implement if necessary
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }

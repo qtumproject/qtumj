@@ -69,7 +69,7 @@ import static com.google.common.base.Preconditions.*;
  * when you already have the public or private parts. If you create a key with only the public part, you can check
  * signatures but not create them.</p>
  *
- * <p>ECKey also provides access to Bitcoin Core compatible text message signing, as accessible via the UI or JSON-RPC.
+ * <p>ECKey also provides access to Qtum Core compatible text message signing, as accessible via the UI or JSON-RPC.
  * This is slightly different to signing raw bytes - if you want to sign your own data and it won't be exposed as
  * text to people, you don't want to use this. If in doubt, ask on the mailing list.</p>
  *
@@ -116,10 +116,10 @@ public class ECKey implements EncryptableItem {
         }
     };
 
-    // The parameters of the secp256k1 curve that Bitcoin uses.
+    // The parameters of the secp256k1 curve that Qtum uses.
     private static final X9ECParameters CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1");
 
-    /** The parameters of the secp256k1 curve that Bitcoin uses. */
+    /** The parameters of the secp256k1 curve that Qtum uses. */
     public static final ECDomainParameters CURVE;
 
     /**
@@ -218,7 +218,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Construct an ECKey from an ASN.1 encoded private key. These are produced by OpenSSL and stored by Bitcoin
+     * Construct an ECKey from an ASN.1 encoded private key. These are produced by OpenSSL and stored by Qtum
      * Core in its wallet. Note that this is slow because it requires an EC point multiply.
      */
     public static ECKey fromASN1(byte[] asn1privkey) {
@@ -405,7 +405,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Output this ECKey as an ASN.1 encoded private key, as understood by OpenSSL or used by Bitcoin Core
+     * Output this ECKey as an ASN.1 encoded private key, as understood by OpenSSL or used by Qtum Core
      * in its wallet storage format.
      * @throws org.bitcoinj.core.ECKey.MissingPrivateKeyException if the private key is missing or encrypted.
      */
@@ -523,7 +523,7 @@ public class ECKey implements EncryptableItem {
         /**
          * Will automatically adjust the S component to be less than or equal to half the curve order, if necessary.
          * This is required because for every signature (r,s) the signature (r, -s (mod N)) is a valid signature of
-         * the same message. However, we dislike the ability to modify the bits of a Bitcoin transaction after it's
+         * the same message. However, we dislike the ability to modify the bits of a Qtum transaction after it's
          * been signed, as that violates various assumed invariants. Thus in future only one of those forms will be
          * considered legal and the other will be banned.
          */
@@ -560,7 +560,7 @@ public class ECKey implements EncryptableItem {
             ASN1InputStream decoder = null;
             try {
                 // BouncyCastle by default is strict about parsing ASN.1 integers. We relax this check, because some
-                // Bitcoin signatures would not parse.
+                // Qtum signatures would not parse.
                 Properties.setThreadOverride("org.bouncycastle.asn1.allow_unsafe_integer", true);
                 decoder = new ASN1InputStream(bytes);
                 final ASN1Primitive seqObj = decoder.readObject();
@@ -682,7 +682,7 @@ public class ECKey implements EncryptableItem {
 
     /**
      * <p>Verifies the given ECDSA signature against the message bytes using the public key bytes.</p>
-     * 
+     *
      * <p>When using native ECDSA verification, data must be 32 bytes, and no element may be
      * larger than 520 bytes.</p>
      *
@@ -851,7 +851,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Signs a text message using the standard Bitcoin messaging signing format and returns the signature as a base64
+     * Signs a text message using the standard Qtum messaging signing format and returns the signature as a base64
      * encoded string.
      *
      * @throws IllegalStateException if this ECKey does not have the private part.
@@ -862,7 +862,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Signs a text message using the standard Bitcoin messaging signing format and returns the signature as a base64
+     * Signs a text message using the standard Qtum messaging signing format and returns the signature as a base64
      * encoded string.
      *
      * @throws IllegalStateException if this ECKey does not have the private part.
@@ -884,7 +884,7 @@ public class ECKey implements EncryptableItem {
     /**
      * Given an arbitrary piece of text and a Bitcoin-format message signature encoded in base64, returns an ECKey
      * containing the public key that was used to sign it. This can then be compared to the expected public key to
-     * determine if the signature was correct. These sorts of signatures are compatible with the Bitcoin-Qt/bitcoind
+     * determine if the signature was correct. These sorts of signatures are compatible with the Qtum-Qt/qtumd
      * format generated by signmessage/verifymessage RPCs and GUI menu options. They are intended for humans to verify
      * their communications with each other, hence the base64 format and the fact that the input is text.
      *
@@ -1044,7 +1044,7 @@ public class ECKey implements EncryptableItem {
     }
 
     /**
-     * Exports the private key in the form used by Bitcoin Core's "dumpprivkey" and "importprivkey" commands. Use
+     * Exports the private key in the form used by Qtum Core's "dumpprivkey" and "importprivkey" commands. Use
      * the {@link DumpedPrivateKey#toString()} method to get the string.
      *
      * @param params The network this key is intended for use on.
@@ -1316,19 +1316,19 @@ public class ECKey implements EncryptableItem {
         }
     }
 
-    /** The string that prefixes all text messages signed using Bitcoin keys. */
-    private static final String BITCOIN_SIGNED_MESSAGE_HEADER = "Bitcoin Signed Message:\n";
-    private static final byte[] BITCOIN_SIGNED_MESSAGE_HEADER_BYTES = BITCOIN_SIGNED_MESSAGE_HEADER.getBytes(StandardCharsets.UTF_8);
+    /** The string that prefixes all text messages signed using Qtum keys. */
+    private static final String QTUM_SIGNED_MESSAGE_HEADER = "Qtum Signed Message:\n";
+    private static final byte[] QTUM_SIGNED_MESSAGE_HEADER_BYTES = QTUM_SIGNED_MESSAGE_HEADER.getBytes(StandardCharsets.UTF_8);
 
     /**
      * <p>Given a textual message, returns a byte buffer formatted as follows:</p>
-     * <p>{@code [24] "Bitcoin Signed Message:\n" [message.length as a varint] message}</p>
+     * <p>{@code [24] "Qtum Signed Message:\n" [message.length as a varint] message}</p>
      */
     private static byte[] formatMessageForSigning(String message) {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            bos.write(BITCOIN_SIGNED_MESSAGE_HEADER_BYTES.length);
-            bos.write(BITCOIN_SIGNED_MESSAGE_HEADER_BYTES);
+            bos.write(QTUM_SIGNED_MESSAGE_HEADER_BYTES.length);
+            bos.write(QTUM_SIGNED_MESSAGE_HEADER_BYTES);
             byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
             VarInt size = new VarInt(messageBytes.length);
             bos.write(size.encode());
