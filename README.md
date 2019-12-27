@@ -1,10 +1,10 @@
-[![Build Status](https://travis-ci.org/bitcoinj/bitcoinj.png?branch=master)](https://travis-ci.org/bitcoinj/bitcoinj)   [![Coverage Status](https://coveralls.io/repos/bitcoinj/bitcoinj/badge.png?branch=master)](https://coveralls.io/r/bitcoinj/bitcoinj?branch=master) 
+<!-- [![Build Status](https://travis-ci.org/bitcoinj/bitcoinj.png?branch=master)](https://travis-ci.org/bitcoinj/bitcoinj)   [![Coverage Status](https://coveralls.io/repos/bitcoinj/bitcoinj/badge.png?branch=master)](https://coveralls.io/r/bitcoinj/bitcoinj?branch=master)  -->
 
-[![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/bitcoinj.png)](https://kiwiirc.com/client/irc.freenode.net/bitcoinj)
+<!-- [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/bitcoinj.png)](https://kiwiirc.com/client/irc.freenode.net/bitcoinj) -->
 
-### Welcome to bitcoinj
+### Welcome to qtumj
 
-The bitcoinj library is a Java implementation of the Bitcoin protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Bitcoin Core. It comes with full documentation and some example apps showing how to use it.
+QtumJ is bitcoinj ported to the Qtum blockchain protocol. The bitcoinj library is a Java implementation of the Bitcoin protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Bitcoin Core. It comes with full documentation and some example apps showing how to use it.
 
 ### Technologies
 
@@ -13,6 +13,18 @@ The bitcoinj library is a Java implementation of the Bitcoin protocol, which all
 * Java 11+ and Gradle 4.10+ for the JavaFX-based `wallettemplate`
 * [Gradle](https://gradle.org/) - for building the project
 * [Google Protocol Buffers](https://github.com/google/protobuf) - for use with serialization and hardware communications
+
+### Status
+
+**Currently the library is not stable yet! Use with caution!**
+
+Features ported:
+
+* [x] Wallet and address managing
+* [x] Qtum transactions creation
+* [x] Node syncing (partially implemented)
+* [ ] Block generating
+* [ ] Blockchain managing
 
 ### Getting started
 
@@ -43,7 +55,7 @@ These are found in the `examples` module.
 
 ### Where next?
 
-Now you are ready to [follow the tutorial](https://bitcoinj.github.io/getting-started).
+Now you are ready to [follow the tutorial from bitcoinj](https://bitcoinj.github.io/getting-started). QtumJ is quite similar to that.
 
 ### Testing a SNAPSHOT build
 
