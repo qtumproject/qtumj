@@ -89,6 +89,8 @@ public class Block extends Message {
     public static final long BLOCK_VERSION_BIP66 = 3;
     /** Block version introduced in BIP 65: OP_CHECKLOCKTIMEVERIFY */
     public static final long BLOCK_VERSION_BIP65 = 4;
+    /** Block version for qtum */
+    public static final long BLOCK_VERSION_QTUM = 0x20000000;
 
     // Fields defined as part of the protocol format.
     private long version;
@@ -688,7 +690,7 @@ public class Block extends Message {
         // Start by adding all the hashes of the transactions as leaves of the tree.
         for (Transaction tx : transactions) {
             final Sha256Hash id;
-            if (useWTxId && tx.isCoinBase())
+            if (useWTxId && (tx.isCoinBase() || tx.isCoinStake()))
                 id = Sha256Hash.ZERO_HASH;
             else
                 id = useWTxId ? tx.getWTxId() : tx.getTxId();

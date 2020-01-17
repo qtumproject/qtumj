@@ -397,25 +397,31 @@ public class BlockChainTest {
 
     // Some blocks from the test net.
     private static Block getBlock2() throws Exception {
-        Block b2 = new Block(TESTNET, Block.BLOCK_VERSION_GENESIS);
-        b2.setMerkleRoot(Sha256Hash.wrap("20222eb90f5895556926c112bb5aa0df4ab5abc3107e21a6950aec3b2e3541e2"));
-        b2.setNonce(875942400L);
-        b2.setTime(1296688946L);
-        b2.setDifficultyTarget(0x1d00ffff);
-        b2.setPrevBlockHash(Sha256Hash.wrap("00000000b873e79784647a6c82962c70d228557d24a747ea4d1b8bbe878e1206"));
-        assertEquals("000000006c02c8ea6e4ff69651f7fcde348fb9d557a06e6957b65552002a7820", b2.getHashAsString());
+        Block b2 = new Block(TESTNET, Block.BLOCK_VERSION_QTUM);
+        b2.setMerkleRoot(Sha256Hash.wrap("c9ab05540195828eaecbae56738060c79777807666123735e206e1f34ad4d8ec"));
+        b2.setNonce(19648L);
+        b2.setTime(1506743770L);
+        b2.setDifficultyTarget(0x1f00ffff);
+        b2.setPrevBlockHash(Sha256Hash.wrap("0000de7d93ecdfc31efa7c66d10b87c41bffee5d71c6df7dd832463a3ccb17fc"));
+        b2.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
+        b2.setHashUtxoRoot(KeccakHash.wrap("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"));
+        b2.setStakeOutputIndex(0xffffffff);
+        assertEquals("0000715144ff7be935a58304f68dd5c09514c0a0291444d72c1d4e09c8163249", b2.getHashAsString());
         b2.verifyHeader();
         return b2;
     }
 
     private static Block getBlock1() throws Exception {
-        Block b1 = new Block(TESTNET, Block.BLOCK_VERSION_GENESIS);
-        b1.setMerkleRoot(Sha256Hash.wrap("f0315ffc38709d70ad5647e22048358dd3745f3ce3874223c80a7c92fab0c8ba"));
-        b1.setNonce(1924588547);
-        b1.setTime(1296688928);
-        b1.setDifficultyTarget(0x1d00ffff);
-        b1.setPrevBlockHash(Sha256Hash.wrap("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"));
-        assertEquals("00000000b873e79784647a6c82962c70d228557d24a747ea4d1b8bbe878e1206", b1.getHashAsString());
+        Block b1 = new Block(TESTNET, Block.BLOCK_VERSION_QTUM);
+        b1.setMerkleRoot(Sha256Hash.wrap("dee4bb3300265f05bb5f179eb9c9124cf9a0ff596b55d1af56e8032e435a5740"));
+        b1.setNonce(44182);
+        b1.setTime(1506743769);
+        b1.setDifficultyTarget(0x1f00ffff);
+        b1.setPrevBlockHash(Sha256Hash.wrap("0000e803ee215c0684ca0d2f9220594d3f828617972aad66feb2ba51f5e14222"));
+        b1.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
+        b1.setHashUtxoRoot(KeccakHash.wrap("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"));
+        b1.setStakeOutputIndex(0xffffffff);
+        assertEquals("0000de7d93ecdfc31efa7c66d10b87c41bffee5d71c6df7dd832463a3ccb17fc", b1.getHashAsString());
         b1.verifyHeader();
         return b1;
     }
@@ -423,9 +429,9 @@ public class BlockChainTest {
     @Test
     public void estimatedBlockTime() throws Exception {
         BlockChain prod = new BlockChain(new Context(MAINNET), new MemoryBlockStore(MAINNET));
-        Date d = prod.estimateBlockTime(200000);
-        // The actual date of block 200,000 was 2012-09-22 10:47:00
-        assertEquals(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).parse("2012-10-23T08:35:05.000-0700"), d);
+        Date d = prod.estimateBlockTime(500000);
+        // The actual date of block 500,000 was 2019-12-06 02:57:36 GMT
+        assertEquals(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).parse("2019-09-17T12:37:09.000+0800"), d);
     }
 
     @Test

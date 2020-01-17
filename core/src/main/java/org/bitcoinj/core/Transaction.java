@@ -60,7 +60,7 @@ import java.math.BigInteger;
  * Whether to trust a transaction is something that needs to be decided on a case by case basis - a rule that makes
  * sense for selling MP3s might not make sense for selling cars, or accepting payments from a family member. If you
  * are building a wallet, how to present confidence to your users is something to consider carefully.</p>
- * 
+ *
  * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class Transaction extends ChildMessage {
@@ -721,14 +721,24 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * A coinbase transaction is one that creates a new coin. They are the first transaction in each block and their
-     * value is determined by a formula that all implementations of Bitcoin share. In 2011 the value of a coinbase
-     * transaction is 50 coins, but in future it will be less. A coinbase transaction is defined not only by its
-     * position in a block but by the data in the inputs.
+     * A coinbase transaction is one that creates a new coin in a PoW block. They are the first transaction in
+     * each block and their value is determined by a formula that all implementations of Qtum share. A coinbase
+     * transaction is defined not only by its position in a block but by the data in the inputs.
      */
     public boolean isCoinBase() {
         return inputs.size() == 1 && inputs.get(0).isCoinBase();
     }
+
+    /**
+     * A coinstake transaction is one that creates a new coin in a PoS block. They are the second transaction in
+     * each block and their value is determined by a formula that all implementations of Qtum share. In 2017 the
+     * value of a coinstake transaction is 4 coins, but in future it will be less. A coinstake transaction is
+     * defined not only by its position in a block but by the data in the inputs.
+     */
+	public boolean isCoinStake() {
+		return inputs.size() > 0 && !inputs.get(0).getOutpoint().getHash().equals(Sha256Hash.ZERO_HASH)
+				&& outputs.size() >= 2 && outputs.get(0).getScriptBytes().length == 0;
+	}
 
     /**
      * A transaction is mature if it is either a building coinbase tx that is as deep or deeper than the required coinbase depth, or a non-coinbase tx.

@@ -1,6 +1,6 @@
 /*
  * Copyright by the original author or authors.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -50,7 +50,7 @@ public class MainController {
 
     private BitcoinUIModel model = new BitcoinUIModel();
     private NotificationBarPane.Item syncItem;
-    private static final MonetaryFormat MONETARY_FORMAT = MonetaryFormat.BTC.noCode();
+    private static final MonetaryFormat MONETARY_FORMAT = MonetaryFormat.QTUM.noCode();
 
     // Called by FXMLLoader.
     public void initialize() {

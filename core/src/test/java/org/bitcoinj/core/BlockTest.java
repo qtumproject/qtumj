@@ -56,7 +56,7 @@ public class BlockTest {
         // One with some of transactions in, so a good test of the merkle tree hashing.
         block700000Bytes = ByteStreams.toByteArray(BlockTest.class.getResourceAsStream("block_testnet700000.dat"));
         block700000 = TESTNET.getDefaultSerializer().makeBlock(block700000Bytes);
-        assertEquals("000000000000406178b12a4dea3b27e13b3c4fe4510994fd667d7c1e6a3f4dc1", block700000.getHashAsString());
+        assertEquals("135d360d7b0db66c83856898e2adfb54d641d1e6771a09985526850945f0158b", block700000.getHashAsString());
     }
 
     @Test
@@ -65,7 +65,7 @@ public class BlockTest {
         double log2Work = Math.log(work.longValue()) / Math.log(2);
         // This number is printed by Bitcoin Core at startup as the calculated value of chainWork on testnet:
         // UpdateTip: new best=000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943 height=0 version=0x00000001 log2_work=32.000022 tx=1 date='2011-02-02 23:16:42' ...
-        assertEquals(32.000022, log2Work, 0.0000001);
+        assertEquals(16.000022, log2Work, 0.0000001);
     }
 
     @Test
@@ -181,7 +181,7 @@ public class BlockTest {
             ByteStreams.toByteArray(getClass().getResourceAsStream("block_testnet21066.dat")));
 
         // Check block.
-        assertEquals("0000000004053156021d8e42459d284220a7f6e087bf78f30179c3703ca4eefa", block.getHashAsString());
+        assertEquals("b896032064c1ada669d2e1072a13797c1fe6230f93ca9c7983ef032ee26b693f", block.getHashAsString());
         block.verify(21066, EnumSet.of(Block.VerifyFlag.HEIGHT_IN_COINBASE));
 
         // Testnet block 32768 (hash 000000007590ba495b58338a5806c2b6f10af921a70dbd814e0da3c6957c0c03)
@@ -193,7 +193,7 @@ public class BlockTest {
             ByteStreams.toByteArray(getClass().getResourceAsStream("block_testnet32768.dat")));
 
         // Check block.
-        assertEquals("000000007590ba495b58338a5806c2b6f10af921a70dbd814e0da3c6957c0c03", block.getHashAsString());
+        assertEquals("b0fd31a2041d5a734163094a507cacdeffa8ef90ac56b13b19227487dc305db9", block.getHashAsString());
         block.verify(32768, EnumSet.of(Block.VerifyFlag.HEIGHT_IN_COINBASE));
     }
 
@@ -238,42 +238,42 @@ public class BlockTest {
     }
 
     @Test
-    public void testBlock481815_witnessCommitmentInCoinbase() throws Exception {
-        Block block481815 = MAINNET.getDefaultSerializer()
-                .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block481815.dat")));
-        assertEquals(2097, block481815.getTransactions().size());
-        assertEquals("f115afa8134171a0a686bfbe9667b60ae6fb5f6a439e0265789babc315333262",
-                block481815.getMerkleRoot().toString());
+    public void testBlock5889_witnessCommitmentInCoinbase() throws Exception {
+        Block block5889 = MAINNET.getDefaultSerializer()
+                .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block5889.dat")));
+        assertEquals(2, block5889.getTransactions().size());
+        assertEquals("9a7ef62517cb8888c2b42d8095d5535a13351dbefe2c736d7968626888a25a3e",
+                block5889.getMerkleRoot().toString());
 
         // This block has no witnesses.
-        for (Transaction tx : block481815.getTransactions())
+        for (Transaction tx : block5889.getTransactions())
             assertFalse(tx.hasWitnesses());
 
         // Nevertheless, there is a witness commitment (but no witness reserved).
-        Transaction coinbase = block481815.getTransactions().get(0);
-        assertEquals("919a0df2253172a55bebcb9002dbe775b8511f84955b282ca6dae826fdd94f90", coinbase.getTxId().toString());
-        assertEquals("919a0df2253172a55bebcb9002dbe775b8511f84955b282ca6dae826fdd94f90",
+        Transaction coinbase = block5889.getTransactions().get(0);
+        assertEquals("b878e67f6f1d8291f0c8a9a3111030157674cdb8a3f5d7ccc1ced96caf308d68", coinbase.getTxId().toString());
+        assertEquals("b878e67f6f1d8291f0c8a9a3111030157674cdb8a3f5d7ccc1ced96caf308d68",
                 coinbase.getWTxId().toString());
         Sha256Hash witnessCommitment = coinbase.findWitnessCommitment();
-        assertEquals("3d03076733467c45b08ec503a0c5d406647b073e1914d35b5111960ed625f3b7", witnessCommitment.toString());
+        assertEquals("598bdca4eab6001d5753ba33e9a50b1986649f4b477948b5f761decd6b742b4e", witnessCommitment.toString());
     }
 
     @Test
     public void testBlock481829_witnessTransactions() throws Exception {
         Block block481829 = MAINNET.getDefaultSerializer()
                 .makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block481829.dat")));
-        assertEquals(2020, block481829.getTransactions().size());
-        assertEquals("f06f697be2cac7af7ed8cd0b0b81eaa1a39e444c6ebd3697e35ab34461b6c58d",
+        assertEquals(3, block481829.getTransactions().size());
+        assertEquals("d0d385376b2b25a95baa725fa53711febcae614ebc3d9f97cfe2054ef66cedf3",
                 block481829.getMerkleRoot().toString());
-        assertEquals("0a02ddb2f86a14051294f8d98dd6959dd12bf3d016ca816c3db9b32d3e24fc2d",
+        assertEquals("1a34a4fc68c0c2c0f1db362fd2d54032345950904cf0c0af9a6aabdc4e2da6ea",
                 block481829.getWitnessRoot().toString());
 
         Transaction coinbase = block481829.getTransactions().get(0);
-        assertEquals("9c1ab453283035800c43eb6461eb46682b81be110a0cb89ee923882a5fd9daa4", coinbase.getTxId().toString());
-        assertEquals("2bbda73aa4e561e7f849703994cc5e563e4bcf103fb0f6fef5ae44c95c7b83a6",
+        assertEquals("a22dfa027fbcc0548bdf1fadcb039cc068ff0223e5cd1e1b9453bd09dd804743", coinbase.getTxId().toString());
+        assertEquals("7eb24cc1a1a3ddd63ab0c042d971ee13887d878d71d05e4d6a0b5b712cdbd245",
                 coinbase.getWTxId().toString());
         Sha256Hash witnessCommitment = coinbase.findWitnessCommitment();
-        assertEquals("c3c1145d8070a57e433238e42e4c022c1e51ca2a958094af243ae1ee252ca106", witnessCommitment.toString());
+        assertEquals("d304233cb1ac6d7dd5494eb6af70b85e66a570eb306dd1f95ea19e861c537378", witnessCommitment.toString());
         byte[] witnessReserved = coinbase.getInput(0).getWitness().getPush(0);
         assertEquals("0000000000000000000000000000000000000000000000000000000000000000", HEX.encode(witnessReserved));
         block481829.checkWitnessRoot();

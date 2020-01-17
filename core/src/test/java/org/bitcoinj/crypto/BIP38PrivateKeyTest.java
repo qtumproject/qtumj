@@ -40,7 +40,7 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_noCompression_noEcMultiply_test1() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PRVWUbkzzsbcVac2qwfssoUJAN1Xhrg6bNk8J7Nzm5H7kxEbn2Nh2ZoGg");
+                "6PRP4FDk4TJm7fViXdbc6U4ZH3QvwuHajFHc8fCj3JrFxkXgMynGHHJm5u");
         ECKey key = encryptedKey.decrypt("TestingOneTwoThree");
         assertEquals("5KN7MzqK5wt2TP1fQCYyHBtDrXdJuXbUzm4A9rKAteGu3Qi5CVR", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
@@ -49,7 +49,7 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_noCompression_noEcMultiply_test2() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PRNFFkZc2NZ6dJqFfhRoFNMR9Lnyj7dYGrzdgXXVMXcxoKTePPX1dWByq");
+                "6PRSfw6tpX9276Fi2xGVqU7JXxbBtTQnKqDRJSGTZQd9jQHJyjv7JNVsqP");
         ECKey key = encryptedKey.decrypt("Satoshi");
         assertEquals("5HtasZ6ofTHP6HCwTqTkLDuLQisYPah7aUnSKfC7h4hMUVw2gi5", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
@@ -58,7 +58,7 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_noCompression_noEcMultiply_test3() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PRW5o9FLp4gJDDVqJQKJFTpMvdsSGJxMYHtHaQBF3ooa8mwD69bapcDQn");
+                "6PRLqnxUetjM4UUfkoWhhy4oLJwtivgrYcADnLyHznnXbLy9V4FtWkRKMp");
         StringBuilder passphrase = new StringBuilder();
         passphrase.appendCodePoint(0x03d2); // GREEK UPSILON WITH HOOK
         passphrase.appendCodePoint(0x0301); // COMBINING ACUTE ACCENT
@@ -73,7 +73,7 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_compression_noEcMultiply_test1() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PYNKZ1EAgYgmQfmNVamxyXVWHzK5s6DGhwP4J5o44cvXdoY7sRzhtpUeo");
+                "6PYUYP8xxyeB1mgXyWzktgSNYvhky9meidrwrwr9AJhUUvdCkiZEaLqZd8");
         ECKey key = encryptedKey.decrypt("TestingOneTwoThree");
         assertEquals("L44B5gGEpqEDRS9vVPz7QT35jcBG2r3CZwSwQ4fCewXAhAhqGVpP", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
@@ -82,7 +82,7 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_compression_noEcMultiply_test2() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PYLtMnXvfG3oJde97zRyLYFZCYizPU5T3LwgdYJz1fRhh16bU7u6PPmY7");
+                "6PYRGeevePcNUT9DZPhkbEHcTkLjcQ2WXFFppseU5GuLFQ9CpTo2w9hL9M");
         ECKey key = encryptedKey.decrypt("Satoshi");
         assertEquals("KwYgW8gcxj1JWJXhPSu4Fqwzfhp5Yfi42mdYmMa4XqK7NJxXUSK7", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
@@ -91,36 +91,36 @@ public class BIP38PrivateKeyTest {
     @Test
     public void bip38testvector_ecMultiply_noCompression_noLotAndSequence_test1() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PfQu77ygVyJLZjfvMLyhLMQbYnu5uguoJJ4kMCLqWwPEdfpwANVS76gTX");
+                "6PfLGsH7QGsX1JwD27uphyTXZ6BcGj9WeCXMAemwuTTYNetkgU6DvXMdDH");
         ECKey key = encryptedKey.decrypt("TestingOneTwoThree");
-        assertEquals("5K4caxezwjGCGfnoPTZ8tMcJBLB7Jvyjv4xxeacadhq8nLisLR2", key.getPrivateKeyEncoded(MAINNET)
+        assertEquals("5JPTjf1AdZaCugxm4jj1frqTzyyS4HG77AW64EnfsbLSG23LMqV", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
     }
 
     @Test
     public void bip38testvector_ecMultiply_noCompression_noLotAndSequence_test2() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PfLGnQs6VZnrNpmVKfjotbnQuaJK4KZoPFrAjx1JMJUa1Ft8gnf5WxfKd");
+                "6PfQdB6AHNGt2vUncFiGu6Cis81u7wnF8W7W9zVafVC9qPyyCz5qxnBQRn");
         ECKey key = encryptedKey.decrypt("Satoshi");
-        assertEquals("5KJ51SgxWaAYR13zd9ReMhJpwrcX47xTJh2D3fGPG9CM8vkv5sH", key.getPrivateKeyEncoded(MAINNET)
+        assertEquals("5JaXa7ci6DJ3RRioDqCKvXD8b1dCuuapueMtrLxxZFTmNZDKazC", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
     }
 
     @Test
     public void bip38testvector_ecMultiply_noCompression_lotAndSequence_test1() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PgNBNNzDkKdhkT6uJntUXwwzQV8Rr2tZcbkDcuC9DZRsS6AtHts4Ypo1j");
+                "6PgH4ewAXih5RMFirBZM1GM4DpY8oWA3PcyM1tVgLaoUpoxhGcuu3S1urz");
         ECKey key = encryptedKey.decrypt("MOLON LABE");
-        assertEquals("5JLdxTtcTHcfYcmJsNVy1v2PMDx432JPoYcBTVVRHpPaxUrdtf8", key.getPrivateKeyEncoded(MAINNET)
+        assertEquals("5Kf24de8728mYwjkBF28eceTB4mzUMkib4Ba7Qmgdh11XZRxYJx", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
     }
 
     @Test
     public void bip38testvector_ecMultiply_noCompression_lotAndSequence_test2() throws Exception {
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(MAINNET,
-                "6PgGWtx25kUg8QWvwuJAgorN6k9FbE25rv5dMRwu5SKMnfpfVe5mar2ngH");
+                "6PgLkr65WqNMxhhqXHUmZ4Dm5KTAHE8aCUVDNr8mETmMfmcX4ZnWMxQQD6");
         ECKey key = encryptedKey.decrypt("ΜΟΛΩΝ ΛΑΒΕ");
-        assertEquals("5KMKKuUmAkiNbA3DazMQiLfDq47qs8MAEThm4yL8R2PhV1ov33D", key.getPrivateKeyEncoded(MAINNET)
+        assertEquals("5KDJ5n4MBJT8om63JuWvekKmViT311LPwj7S5W4dAP7T64T3co1", key.getPrivateKeyEncoded(MAINNET)
                 .toString());
     }
 
@@ -128,7 +128,7 @@ public class BIP38PrivateKeyTest {
     public void bitcoinpaperwallet_testnet() throws Exception {
         // values taken from bitcoinpaperwallet.com
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(TESTNET,
-                "6PRPhQhmtw6dQu6jD8E1KS4VphwJxBS9Eh9C8FQELcrwN3vPvskv9NKvuL");
+                "6PRMCrGJibW5UirDXpji9KTVQkZaMugfZSY1aprCEBFDAB8EZ6rSDQRc9Z");
         ECKey key = encryptedKey.decrypt("password");
         assertEquals("93MLfjbY6ugAsLeQfFY6zodDa8izgm1XAwA9cpMbUTwLkDitopg", key.getPrivateKeyEncoded(TESTNET)
                 .toString());
@@ -138,9 +138,9 @@ public class BIP38PrivateKeyTest {
     public void bitaddress_testnet() throws Exception {
         // values taken from bitaddress.org
         BIP38PrivateKey encryptedKey = BIP38PrivateKey.fromBase58(TESTNET,
-                "6PfMmVHn153N3x83Yiy4Nf76dHUkXufe2Adr9Fw5bewrunGNeaw2QCpifb");
+                "6PfXFP3sQ2DaZoaq9aqfs3twinbvJFkZX6LsthRNyhrNtNy9G1KDvdPW1D");
         ECKey key = encryptedKey.decrypt("password");
-        assertEquals("91tCpdaGr4Khv7UAuUxa6aMqeN5GcPVJxzLtNsnZHTCndxkRcz2", key.getPrivateKeyEncoded(TESTNET)
+        assertEquals("92BVV3drZwXZzq8Hzz58ZzjjtDjbudgyp8vt4hL2Y9FmktDKUjh", key.getPrivateKeyEncoded(TESTNET)
                 .toString());
     }
 
