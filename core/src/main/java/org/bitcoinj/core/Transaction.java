@@ -104,9 +104,9 @@ public class Transaction extends ChildMessage {
     public static final int MAX_STANDARD_TX_SIZE = 100000;
 
     /**
-     * If feePerKb is lower than this, Bitcoin Core will treat it as if there were no fee.
+     * If feePerKb is lower than this, Qtum Core will treat it as if there were no fee.
      */
-    public static final Coin REFERENCE_DEFAULT_MIN_TX_FEE = Coin.valueOf(1000); // 0.01 mBTC
+    public static final Coin REFERENCE_DEFAULT_MIN_TX_FEE = Coin.valueOf(400000); // 0.004 QTUM
 
     /**
      * If using this feePerKb, transactions will get confirmed within the next couple of blocks.

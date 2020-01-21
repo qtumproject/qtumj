@@ -195,7 +195,7 @@ public class SPVBlockStore implements BlockStore {
             Sha256Hash hash = block.getHeader().getHash();
             notFoundCache.remove(hash);
             buffer.put(hash.getBytes());
-            block.serializeCompact(buffer);
+            block.serializeCompact(buffer, true);
             setRingCursor(buffer, buffer.position());
             blockCache.put(hash, block);
         } finally { lock.unlock(); }
@@ -204,6 +204,10 @@ public class SPVBlockStore implements BlockStore {
     @Override
     @Nullable
     public StoredBlock get(Sha256Hash hash) throws BlockStoreException {
+        // would fail at genesis block without this
+        if (hash.equals(Sha256Hash.ZERO_HASH)) {
+            return null;
+        }
         final MappedByteBuffer buffer = this.buffer;
         if (buffer == null) throw new BlockStoreException("Store closed");
 
@@ -300,19 +304,23 @@ public class SPVBlockStore implements BlockStore {
         return params;
     }
 
-    protected static final int RECORD_SIZE = 32 /* hash */ + StoredBlock.COMPACT_SERIALIZED_SIZE;
-
     // File format:
     //   4 header bytes = "SPVB"
     //   4 cursor bytes, which indicate the offset from the first kb where the next block header should be written.
     //   32 bytes for the hash of the chain head
     //
-    // For each header (128 bytes)
+    // For each header (512 bytes)
     //   32 bytes hash of the header
     //   12 bytes of chain work
     //    4 bytes of height
-    //   80 bytes of block header data
+    //    4 bytes of header size
+    //    ? bytes of block header data
+    //    ? bytes of padding
+
     protected static final int FILE_PROLOGUE_BYTES = 1024;
+
+    /* the size of a block header is dynamic, just leave more room to make it fixed */
+    protected static final int RECORD_SIZE = 32 + StoredBlock.COMPACT_SERIALIZED_SIZE;
 
     /** Returns the offset from the file start where the latest block should be written (end of prev block). */
     private int getRingCursor(ByteBuffer buffer) {

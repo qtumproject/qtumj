@@ -212,11 +212,17 @@ public class Block extends Message {
         this.version = version;
         this.prevBlockHash = prevBlockHash;
         this.merkleRoot = merkleRoot;
+        this.hashStateRoot = Sha256Hash.ZERO_HASH;
+        this.stakePrevTxid = Sha256Hash.ZERO_HASH;
+        this.hashUtxoRoot = KeccakHash.ZERO_HASH;
+        this.signature = new byte[0];
         this.time = time;
         this.difficultyTarget = difficultyTarget;
         this.nonce = nonce;
         this.transactions = new LinkedList<>();
         this.transactions.addAll(transactions);
+
+        updateHeaderSize();
     }
 
 

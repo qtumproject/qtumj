@@ -41,7 +41,7 @@ public class StoredBlock {
     // bytes to represent this field, so 12 bytes should be plenty for now.
     private static final int CHAIN_WORK_BYTES = 12;
     private static final byte[] EMPTY_BYTES = new byte[CHAIN_WORK_BYTES];
-    public static final int COMPACT_SERIALIZED_SIZE = Block.HEADER_SIZE_WITHOUT_SIGNATURE + CHAIN_WORK_BYTES + 4;  // for height
+    public static final int COMPACT_SERIALIZED_SIZE = 480;  // make it fixed
 
     private final Block header;
     private final BigInteger chainWork;
@@ -122,8 +122,12 @@ public class StoredBlock {
         return store.get(getHeader().getPrevBlockHash());
     }
 
-    /** Serializes the stored block to a custom packed format. Used by {@link CheckpointManager}. */
     public void serializeCompact(ByteBuffer buffer) {
+        serializeCompact(buffer, false);
+    }
+
+    /** Serializes the stored block to a custom packed format. Used by {@link CheckpointManager}. */
+    public void serializeCompact(ByteBuffer buffer, boolean padToFixedLength) {
         byte[] chainWorkBytes = getChainWork().toByteArray();
         checkState(chainWorkBytes.length <= CHAIN_WORK_BYTES, "Ran out of space to store chain work!");
         if (chainWorkBytes.length < CHAIN_WORK_BYTES) {
@@ -134,8 +138,17 @@ public class StoredBlock {
         buffer.putInt(getHeight());
         // Using unsafeBitcoinSerialize here can give us direct access to the same bytes we read off the wire,
         // avoiding serialization round-trips.
-        byte[] bytes = getHeader().unsafeBitcoinSerialize();
-        buffer.put(bytes, 0, Block.HEADER_SIZE_WITHOUT_SIGNATURE);  // Trim the trailing 00 byte (zero transactions).
+        Block header = getHeader();
+        byte[] bytes = header.unsafeBitcoinSerialize();
+        int headerSize = header.getHeaderSize();
+        buffer.putInt(headerSize);
+        buffer.put(bytes, 0, headerSize);  // Trim the trailing 00 byte (zero transactions).
+        if (padToFixedLength) {
+            int paddingLength = COMPACT_SERIALIZED_SIZE - CHAIN_WORK_BYTES - 8 - headerSize;
+            for (int i = 0; i < paddingLength; i++) {
+                buffer.put((byte) 0);
+            }
+        }
     }
 
     /** De-serializes the stored block from a custom packed format. Used by {@link CheckpointManager}. */
@@ -144,8 +157,9 @@ public class StoredBlock {
         buffer.get(chainWorkBytes);
         BigInteger chainWork = new BigInteger(1, chainWorkBytes);
         int height = buffer.getInt();  // +4 bytes
-        byte[] header = new byte[Block.HEADER_SIZE_WITHOUT_SIGNATURE + 1];    // Extra byte for the 00 transactions length.
-        buffer.get(header, 0, Block.HEADER_SIZE_WITHOUT_SIGNATURE);
+        int headerSize = buffer.getInt(); // +4 bytes
+        byte[] header = new byte[headerSize + 1];    // Extra byte for the 00 transactions length.
+        buffer.get(header, 0, headerSize);
         return new StoredBlock(params.getDefaultSerializer().makeBlock(header), chainWork, height);
     }
 
