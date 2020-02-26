@@ -46,7 +46,7 @@ public class LevelDBBlockStoreTest {
         assertEquals(0, genesis.getHeight());
 
         // Build a new block.
-        Address to = LegacyAddress.fromBase58(UNITTEST, "mrj2K6txjo2QBcSmuAzHj4nD1oXSEJE1Qo");
+        Address to = LegacyAddress.fromBase58(UNITTEST, "qUmTB5aZ8RCHYWhZ7wzA6CEHgLqvhnJgW8");
         StoredBlock b1 = genesis.build(genesis.getHeader().createNextBlock(to).cloneAsHeader());
         store.put(b1);
         store.setChainHead(b1);

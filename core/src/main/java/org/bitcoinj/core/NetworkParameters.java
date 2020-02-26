@@ -119,7 +119,7 @@ public abstract class NetworkParameters {
         genesisBlock.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
         genesisBlock.setHashUtxoRoot(KeccakHash.of(new byte[] {(byte) 0x80})); // RLP("") is 0x80
         genesisBlock.setStakePrevTxid(Sha256Hash.ZERO_HASH);
-        genesisBlock.setStakeOutputIndex(0xffffffff);
+        genesisBlock.setStakeOutputIndex(0xffffffffL);
 
         Transaction t = new Transaction(n);
         try {

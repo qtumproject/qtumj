@@ -51,7 +51,7 @@ public class UnitTestParams extends AbstractQtumNetParams {
         dumpedPrivateKeyHeader = 239;
         segwitAddressHrp = "tq";
         genesisBlock.setTime(Utils.currentTimeSeconds());
-        genesisBlock.setDifficultyTarget(Block.EASIEST_DIFFICULTY_TARGET);
+        genesisBlock.setDifficultyTarget(Utils.encodeCompactBits(maxTarget));
         genesisBlock.solve();
 
         spendableCoinbaseDepth = 5;

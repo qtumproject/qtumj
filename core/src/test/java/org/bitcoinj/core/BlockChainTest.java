@@ -31,6 +31,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.junit.rules.ExpectedException;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -153,6 +154,7 @@ public class BlockChainTest {
         assertEquals(chain.getChainHead().getHeader(), b3.cloneAsHeader());
     }
 
+    @Ignore("not applicable")
     @Test
     public void difficultyTransitions() throws Exception {
         // Add a bunch of blocks in a loop until we reach a difficulty transition point. The unit test params have an
@@ -206,18 +208,6 @@ public class BlockChainTest {
             assertTrue(e.getMessage(), e.getCause().getMessage().contains("Difficulty target is bad"));
         }
 
-        // Accept any level of difficulty now.
-        BigInteger oldVal = TESTNET.getMaxTarget();
-        TESTNET.setMaxTarget(new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16));
-        try {
-            testNetChain.add(bad);
-            // We should not get here as the difficulty target should not be changing at this point.
-            fail();
-        } catch (VerificationException e) {
-            assertTrue(e.getMessage(), e.getCause().getMessage().contains("Unexpected change in difficulty"));
-        }
-        TESTNET.setMaxTarget(oldVal);
-
         // TODO: Test difficulty change is not out of range when a transition period becomes valid.
     }
 
@@ -225,6 +215,7 @@ public class BlockChainTest {
      * Test that version 2 blocks are rejected once version 3 blocks are a super
      * majority.
      */
+    @Ignore("not applicable")
     @Test
     public void badBip66Version() throws Exception {
         testDeprecatedBlockVersion(Block.BLOCK_VERSION_BIP34, Block.BLOCK_VERSION_BIP66);
@@ -234,6 +225,7 @@ public class BlockChainTest {
      * Test that version 3 blocks are rejected once version 4 blocks are a super
      * majority.
      */
+    @Ignore("not applicable")
     @Test
     public void badBip65Version() throws Exception {
         testDeprecatedBlockVersion(Block.BLOCK_VERSION_BIP66, Block.BLOCK_VERSION_BIP65);
@@ -405,7 +397,7 @@ public class BlockChainTest {
         b2.setPrevBlockHash(Sha256Hash.wrap("0000de7d93ecdfc31efa7c66d10b87c41bffee5d71c6df7dd832463a3ccb17fc"));
         b2.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
         b2.setHashUtxoRoot(KeccakHash.wrap("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"));
-        b2.setStakeOutputIndex(0xffffffff);
+        b2.setStakeOutputIndex(0xffffffffL);
         assertEquals("0000715144ff7be935a58304f68dd5c09514c0a0291444d72c1d4e09c8163249", b2.getHashAsString());
         b2.verifyHeader();
         return b2;
@@ -420,7 +412,7 @@ public class BlockChainTest {
         b1.setPrevBlockHash(Sha256Hash.wrap("0000e803ee215c0684ca0d2f9220594d3f828617972aad66feb2ba51f5e14222"));
         b1.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
         b1.setHashUtxoRoot(KeccakHash.wrap("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"));
-        b1.setStakeOutputIndex(0xffffffff);
+        b1.setStakeOutputIndex(0xffffffffL);
         assertEquals("0000de7d93ecdfc31efa7c66d10b87c41bffee5d71c6df7dd832463a3ccb17fc", b1.getHashAsString());
         b1.verifyHeader();
         return b1;

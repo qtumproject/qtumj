@@ -231,7 +231,7 @@ public class TransactionOutput extends ChildMessage {
      * and mined by default miners.
      */
     public Coin getMinNonDustValue() {
-        return getMinNonDustValue(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.multiply(3));
+        return getMinNonDustValue(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE);
     }
 
     /**

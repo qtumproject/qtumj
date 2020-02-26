@@ -75,7 +75,7 @@ public class Block extends Message {
     public static final int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
 
     /** A value for difficultyTarget (nBits) that allows half of all possible hash solutions. Used in unit testing. */
-    public static final long EASIEST_DIFFICULTY_TARGET = 0x1f00ffffL;
+    public static final long EASIEST_DIFFICULTY_TARGET = 0x207fFFFFL;
 
     /** Value to use if the block height is unknown */
     public static final int BLOCK_HEIGHT_UNKNOWN = -1;
@@ -131,6 +131,7 @@ public class Block extends Message {
         prevBlockHash = Sha256Hash.ZERO_HASH;
         hashStateRoot = Sha256Hash.ZERO_HASH;
         stakePrevTxid = Sha256Hash.ZERO_HASH;
+        stakeOutputIndex = 0xffffffffL;
         hashUtxoRoot = KeccakHash.ZERO_HASH;
         signature = new byte[0];
         updateHeaderSize();

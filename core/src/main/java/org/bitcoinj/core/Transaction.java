@@ -110,9 +110,9 @@ public class Transaction extends ChildMessage {
 
     /**
      * If using this feePerKb, transactions will get confirmed within the next couple of blocks.
-     * This should be adjusted from time to time. Last adjustment: February 2017.
+     * This should be adjusted from time to time. Last adjustment: February 2020.
      */
-    public static final Coin DEFAULT_TX_FEE = Coin.valueOf(100000); // 1 mBTC
+    public static final Coin DEFAULT_TX_FEE = Coin.valueOf(400000); // 0.004 QTUM
 
     /** @deprecated use {@link TransactionOutput#getMinNonDustValue()} */
     @Deprecated

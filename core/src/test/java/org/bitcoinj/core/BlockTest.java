@@ -28,6 +28,7 @@ import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -47,16 +48,16 @@ public class BlockTest {
     private static final NetworkParameters UNITTEST = UnitTestParams.get();
     private static final NetworkParameters MAINNET = MainNetParams.get();
 
-    private byte[] block700000Bytes;
-    private Block block700000;
+    private byte[] block57172Bytes;
+    private Block block57172;
 
     @Before
     public void setUp() throws Exception {
         new Context(TESTNET);
         // One with some of transactions in, so a good test of the merkle tree hashing.
-        block700000Bytes = ByteStreams.toByteArray(BlockTest.class.getResourceAsStream("block_testnet700000.dat"));
-        block700000 = TESTNET.getDefaultSerializer().makeBlock(block700000Bytes);
-        assertEquals("135d360d7b0db66c83856898e2adfb54d641d1e6771a09985526850945f0158b", block700000.getHashAsString());
+        block57172Bytes = ByteStreams.toByteArray(BlockTest.class.getResourceAsStream("block_testnet57172.dat"));
+        block57172 = TESTNET.getDefaultSerializer().makeBlock(block57172Bytes);
+        assertEquals("a59fad44cfb109a6d49815d96dbe66ca5160573c9f06143fdf9e86a02cc020c5", block57172.getHashAsString());
     }
 
     @Test
@@ -70,19 +71,19 @@ public class BlockTest {
 
     @Test
     public void testBlockVerification() throws Exception {
-        block700000.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
+        block57172.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
     }
 
-    @SuppressWarnings("deprecation")
     @Test
     public void testDate() throws Exception {
-        assertEquals("2016-02-13T22:59:39Z", Utils.dateTimeFormat(block700000.getTime()));
+        assertEquals("2017-12-26T14:22:08Z", Utils.dateTimeFormat(block57172.getTime()));
     }
 
+    @Ignore("fix after pos added")
     @Test
     public void testProofOfWork() throws Exception {
         // This params accepts any difficulty target.
-        Block block = UNITTEST.getDefaultSerializer().makeBlock(block700000Bytes);
+        Block block = UNITTEST.getDefaultSerializer().makeBlock(block57172Bytes);
         block.setNonce(12346);
         try {
             block.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
@@ -111,12 +112,12 @@ public class BlockTest {
     @Test
     public void testBadTransactions() throws Exception {
         // Re-arrange so the coinbase transaction is not first.
-        Transaction tx1 = block700000.transactions.get(0);
-        Transaction tx2 = block700000.transactions.get(1);
-        block700000.transactions.set(0, tx2);
-        block700000.transactions.set(1, tx1);
+        Transaction tx1 = block57172.transactions.get(0);
+        Transaction tx2 = block57172.transactions.get(1);
+        block57172.transactions.set(0, tx2);
+        block57172.transactions.set(1, tx1);
         try {
-            block700000.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
+            block57172.verify(Block.BLOCK_HEIGHT_GENESIS, EnumSet.noneOf(Block.VerifyFlag.class));
             fail();
         } catch (VerificationException e) {
             // We should get here.
@@ -125,7 +126,7 @@ public class BlockTest {
 
     @Test
     public void testHeaderParse() throws Exception {
-        Block header = block700000.cloneAsHeader();
+        Block header = block57172.cloneAsHeader();
         Block reparsed = TESTNET.getDefaultSerializer().makeBlock(header.bitcoinSerialize());
         assertEquals(reparsed, header);
     }
@@ -136,7 +137,7 @@ public class BlockTest {
         // proves that transaction serialization works, along with all its subobjects like scripts and in/outpoints.
         //
         // NB: This tests the bitcoin serialization protocol.
-        assertArrayEquals(block700000Bytes, block700000.bitcoinSerialize());
+        assertArrayEquals(block57172Bytes, block57172.bitcoinSerialize());
     }
 
     @Test
@@ -197,6 +198,7 @@ public class BlockTest {
         block.verify(32768, EnumSet.of(Block.VerifyFlag.HEIGHT_IN_COINBASE));
     }
 
+    @Ignore("not doable for now")
     @Test
     public void testReceiveCoinbaseTransaction() throws Exception {
         // Block 169482 (hash 0000000000000756935f1ee9d5987857b604046f846d3df56d024cdb5f368665)
@@ -206,7 +208,7 @@ public class BlockTest {
         // The address for this private key is 1GqtGtn4fctXuKxsVzRPSLmYWN1YioLi9y.
         final String MINING_PRIVATE_KEY = "5JDxPrBRghF1EvSBjDigywqfmAjpHPmTJxYtQTYJxJRHLLQA4mG";
 
-        final long BLOCK_NONCE = 3973947400L;
+        final long BLOCK_NONCE = 0L;
         final Coin BALANCE_AFTER_BLOCK = Coin.valueOf(22223642);
         Block block169482 = MAINNET.getDefaultSerializer().makeBlock(ByteStreams.toByteArray(getClass().getResourceAsStream("block169482.dat")));
 
@@ -279,6 +281,7 @@ public class BlockTest {
         block481829.checkWitnessRoot();
     }
 
+    @Ignore("not applicable")
     @Test
     public void isBIPs() throws Exception {
         final Block genesis = MAINNET.getGenesisBlock();

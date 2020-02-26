@@ -214,7 +214,7 @@ public class WalletProtobufSerializerTest {
 
         // Create a block.
         Block block = UNITTEST.getDefaultSerializer()
-                .makeBlock(ByteStreams.toByteArray(BlockTest.class.getResourceAsStream("block_testnet700000.dat")));
+                .makeBlock(ByteStreams.toByteArray(BlockTest.class.getResourceAsStream("block_testnet57172.dat")));
         Sha256Hash blockHash = block.getHash();
         wallet.setLastBlockSeenHash(blockHash);
         wallet.setLastBlockSeenHeight(1);
