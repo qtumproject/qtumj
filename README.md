@@ -16,15 +16,15 @@ QtumJ is bitcoinj ported to the Qtum blockchain protocol. The bitcoinj library i
 
 ### Status
 
-**Currently the library is not stable yet! Use with caution!**
+**Currently the library is not stable enough! Use with caution!**
 
 Features ported:
 
 * [x] Wallet and address managing
 * [x] Qtum transactions creation
-* [x] Node syncing (partially implemented)
+* [x] Node syncing
 * [ ] Block generating
-* [ ] Blockchain managing
+* [x] Blockchain managing (partially finished)
 
 ### Getting started
 
