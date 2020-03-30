@@ -253,4 +253,99 @@ public class ScriptPattern {
     public static Sha256Hash extractWitnessCommitmentHash(Script script) {
         return Sha256Hash.wrap(Arrays.copyOfRange(script.chunks.get(1).data, 4, 36));
     }
+    
+    /**
+     * Returns true if the given script is an OP_CREATE script.
+     */
+    public static boolean isOpCreate(Script script) {
+        // TODO: add support for OP_SENDER
+        List<ScriptChunk> chunks = script.chunks;
+        if (chunks.size() != 5)
+            return false;
+        if (!chunks.get(0).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(1).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(2).isPushData()) {
+            return false;
+        }
+        ScriptChunk chunk3 = chunks.get(3);
+        if (!chunk3.isPushData()) {
+            return false;
+        }
+        if (chunk3.data == null) {
+            return false;
+        }
+        if (!chunks.get(4).equalsOpCode(OP_CREATE)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Returns true if the given script is an OP_CALL script.
+     */
+    public static boolean isOpCall(Script script) {
+        // TODO: add support for OP_SENDER
+        List<ScriptChunk> chunks = script.chunks;
+        if (chunks.size() != 6)
+            return false;
+        if (!chunks.get(0).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(1).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(2).isPushData()) {
+            return false;
+        }
+        ScriptChunk chunk3 = chunks.get(3);
+        if (!chunk3.isPushData()) {
+            return false;
+        }
+        if (chunk3.data == null) {
+            return false;
+        }
+        byte[] chunk4data = chunks.get(4).data;
+        if (chunk4data == null || chunk4data.length != 20) {
+            return false;
+        }
+        if (!chunks.get(5).equalsOpCode(OP_CALL)) {
+            return false;
+        }
+        return true;
+    }
+    
+    /**
+     * Whether the sript is a contract script.
+     */
+    public static boolean isContract(Script script) {
+        return isOpCall(script) || isOpCreate(script);
+    }
+
+    /**
+     * Get gasLimit value from the script.
+     */
+    public static long extractGasLimit(Script script) {
+        if (!isContract(script)) {
+            return 0;
+        }
+        byte[] gasLimitBytes = script.chunks.get(1).data;
+        BigInteger gasLimit = Utils.decodeMPI(Utils.reverseBytes(gasLimitBytes), false);
+        return gasLimit.longValueExact();
+    }
+
+    /**
+     * Get gasPrice value from the script.
+     */
+    public static long extractGasPrice(Script script) {
+        if (!isContract(script)) {
+            return 0;
+        }
+        byte[] gasPriceBytes = script.chunks.get(2).data;
+        BigInteger gasPrice = Utils.decodeMPI(Utils.reverseBytes(gasPriceBytes), false);
+        return gasPrice.longValueExact();
+    }
 }

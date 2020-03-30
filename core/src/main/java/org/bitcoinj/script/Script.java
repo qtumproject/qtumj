@@ -286,6 +286,22 @@ public class Script {
         else
             throw new ScriptException(ScriptError.SCRIPT_ERR_UNKNOWN_ERROR, "Cannot cast this script to an address");
     }
+    
+    /**
+     * Gets the gasLimit for contract outputs
+     * @return gasLimit of the output, 0 if it's not a contract output
+     */
+    public long getGasLimit() {
+        return ScriptPattern.extractGasLimit(this);
+    }
+    
+    /**
+     * Gets the gasPrice for contract outputs
+     * @return gasPrice of the output, 0 if it's not a contract output
+     */
+    public long getGasPrice() {
+        return ScriptPattern.extractGasPrice(this);
+    }
 
     ////////////////////// Interface for writing scripts from scratch ////////////////////////////////
 

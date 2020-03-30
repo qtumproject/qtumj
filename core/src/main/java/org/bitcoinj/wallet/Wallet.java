@@ -5158,6 +5158,12 @@ public class Wallet extends BaseTaggableObject
 
             final int vsize = tx.getVsize() + estimateVirtualBytesForSigning(selection);
             Coin feeNeeded = feePerKb.multiply(vsize).divide(1000);
+            
+            // add possible fees for Gas
+            for (TransactionOutput output : tx.getOutputs()) {
+                Script script = output.getScriptPubKey();
+                feeNeeded = feeNeeded.add(Coin.valueOf(script.getGasLimit() * script.getGasPrice()));
+            }
 
             if (!fee.isLessThan(feeNeeded)) {
                 // Done, enough fee included.
