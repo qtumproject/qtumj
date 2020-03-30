@@ -164,6 +164,26 @@ public class ScriptOpCodes {
     public static final int OP_NOP8 = 0xb7;
     public static final int OP_NOP9 = 0xb8;
     public static final int OP_NOP10 = 0xb9;
+
+    // Execute EXT byte code.
+    public static final int OP_CREATE = 0xc1;
+    public static final int OP_CALL = 0xc2;
+    public static final int OP_SPEND = 0xc3;
+    public static final int OP_SENDER = 0xc4;
+
+    // template matching params
+    public static final int OP_ADDRESS_TYPE = 0xf2;
+    public static final int OP_ADDRESS = 0xf3;
+    public static final int OP_SCRIPT_SIG = 0xf4;
+    public static final int OP_GAS_PRICE = 0xf5;
+    public static final int OP_VERSION = 0xf6;
+    public static final int OP_GAS_LIMIT = 0xf7;
+    public static final int OP_DATA = 0xf8;
+    public static final int OP_SMALLINTEGER = 0xfa;
+    public static final int OP_PUBKEYS = 0xfb;
+    public static final int OP_PUBKEYHASH = 0xfd;
+    public static final int OP_PUBKEY = 0xfe;
+
     public static final int OP_INVALIDOPCODE = 0xff;
 
     private static final BiMap<Integer, String> opCodeMap = ImmutableBiMap.<Integer, String>builder()
@@ -277,7 +297,22 @@ public class ScriptOpCodes {
         .put(OP_NOP7, "NOP7")
         .put(OP_NOP8, "NOP8")
         .put(OP_NOP9, "NOP9")
-        .put(OP_NOP10, "NOP10").build();
+        .put(OP_NOP10, "NOP10")
+        .put(OP_CREATE, "OP_CREATE")
+        .put(OP_CALL, "OP_CALL")
+        .put(OP_SPEND, "OP_SPEND")
+        .put(OP_SENDER, "OP_SENDER")
+        .put(OP_ADDRESS_TYPE, "OP_ADDRESS_TYPE")
+        .put(OP_ADDRESS, "OP_ADDRESS")
+        .put(OP_SCRIPT_SIG, "OP_SCRIPT_SIG")
+        .put(OP_GAS_PRICE, "OP_GAS_PRICE")
+        .put(OP_VERSION, "OP_VERSION")
+        .put(OP_GAS_LIMIT, "OP_GAS_LIMIT")
+        .put(OP_DATA, "OP_DATA")
+        .put(OP_SMALLINTEGER, "OP_SMALLINTEGER")
+        .put(OP_PUBKEYS, "OP_PUBKEYS")
+        .put(OP_PUBKEYHASH, "OP_PUBKEYHASH")
+        .put(OP_PUBKEY, "OP_PUBKEY").build();
 
     private static final Map<String, Integer> opCodeNameMap = ImmutableMap.<String, Integer>builder()
             .putAll(opCodeMap.inverse())
