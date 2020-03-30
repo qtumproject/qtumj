@@ -540,4 +540,31 @@ public class ScriptBuilder {
         checkArgument(data.length <= 80);
         return new ScriptBuilder().op(OP_RETURN).data(data).build();
     }
+    
+    /**
+     * Creates a script for the OP_CREATE opcode. This is for creating smart contracts on Qtum.
+     */
+    public static Script createOpCreateScript(byte[] byteCode, long gasLimit, long gasPrice) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.bigNum(4); // VMVersion
+        builder.bigNum(gasLimit);
+        builder.bigNum(gasPrice);
+        builder.data(byteCode);
+        builder.op(OP_CREATE);
+        return builder.build();
+    }
+    
+    /**
+     * Creates a script of the OP_CALL opcode. This is for creating transaction calling smart contracts on Qtum.
+     */
+    public static Script createOpCallScript(byte[] data, long gasLimit, long gasPrice, byte[] contractAddress) {
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.bigNum(4); // VMVersion
+        builder.bigNum(gasLimit);
+        builder.bigNum(gasPrice);
+        builder.data(data);
+        builder.data(contractAddress);
+        builder.op(OP_CALL);
+        return builder.build();
+    }
 }
