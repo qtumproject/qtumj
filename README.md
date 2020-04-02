@@ -1,8 +1,4 @@
-<!-- [![Build Status](https://travis-ci.org/bitcoinj/bitcoinj.png?branch=master)](https://travis-ci.org/bitcoinj/bitcoinj)   [![Coverage Status](https://coveralls.io/repos/bitcoinj/bitcoinj/badge.png?branch=master)](https://coveralls.io/r/bitcoinj/bitcoinj?branch=master)  -->
-
-<!-- [![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/bitcoinj.png)](https://kiwiirc.com/client/irc.freenode.net/bitcoinj) -->
-
-### Welcome to qtumj
+### Welcome to QtumJ
 
 QtumJ is bitcoinj ported to the Qtum blockchain protocol. The bitcoinj library is a Java implementation of the Bitcoin protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Bitcoin Core. It comes with full documentation and some example apps showing how to use it.
 
@@ -16,7 +12,7 @@ QtumJ is bitcoinj ported to the Qtum blockchain protocol. The bitcoinj library i
 
 ### Status
 
-**Currently the library is not stable enough! Use with caution!**
+**Currently this library is a basically usable version, it might have some minor issues. Use with caution!**
 
 Features ported:
 
@@ -25,6 +21,7 @@ Features ported:
 * [x] Node syncing
 * [ ] Block generating
 * [x] Blockchain managing (partially finished)
+* [x] Creating and calling contracts
 
 ### Getting started
 
@@ -56,13 +53,3 @@ These are found in the `examples` module.
 ### Where next?
 
 Now you are ready to [follow the tutorial from bitcoinj](https://bitcoinj.github.io/getting-started). QtumJ is quite similar to that.
-
-### Testing a SNAPSHOT build
-
-Building apps with official releases of **bitcoinj** is covered in the [tutorial](https://bitcoinj.github.io/getting-started).
-
-If you want to develop or test your app with a [Jitpack](https://jitpack.io)-powered build of the latest `master` or `release-0.15` branch of **bitcoinj** follow the dynamically-generated instructions for that branch by following the correct link.
-
-
-* [master](https://jitpack.io/#bitcoinj/bitcoinj/master-SNAPSHOT) branch
-* [release-0.15](https://jitpack.io/#bitcoinj/bitcoinj/release-0.15-SNAPSHOT) branch
