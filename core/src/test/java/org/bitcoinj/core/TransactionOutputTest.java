@@ -82,6 +82,53 @@ public class TransactionOutputTest extends TestWithWallet {
         assertFalse(ScriptPattern.isP2PK(tx.getOutput(0).getScriptPubKey()));
         assertFalse(ScriptPattern.isP2PKH(tx.getOutput(0).getScriptPubKey()));
     }
+    
+    @Test
+    public void testContractCreate() {
+        final byte[] bytes = "dummy bytes".getBytes();
+        Transaction tx = new Transaction(MAINNET);
+        
+        tx.addOpCreateOutput(bytes, 20000L, 50L);
+        final Script scriptPubkey0 = tx.getOutput(0).getScriptPubKey();
+        assertTrue(ScriptPattern.isOpCreate(scriptPubkey0));
+        assertFalse(ScriptPattern.isOpCall(scriptPubkey0));
+        assertEquals(20000L, scriptPubkey0.getGasLimit());
+        assertEquals(50L, scriptPubkey0.getGasPrice());
+
+        tx.addOpCreateOutput(bytes);
+        final Script scriptPubkey1 = tx.getOutput(1).getScriptPubKey();
+        assertTrue(ScriptPattern.isOpCreate(scriptPubkey1));
+        assertFalse(ScriptPattern.isOpCall(scriptPubkey1));
+        assertEquals(250000L, scriptPubkey1.getGasLimit());
+        assertEquals(40L, scriptPubkey1.getGasPrice());
+
+        assertTrue(ScriptPattern.isContract(scriptPubkey0));
+        assertTrue(ScriptPattern.isContract(scriptPubkey1));
+    }
+    
+    @Test
+    public void testContractCall() {
+        final byte[] bytes = "dummy bytes".getBytes();
+        final ContractAddress addr = ContractAddress.fromString("0000000000000000000000000000000000000000");
+        Transaction tx = new Transaction(MAINNET);
+        
+        tx.addOpCallOutput(bytes, addr, 3721087L, 456L);
+        final Script scriptPubkey0 = tx.getOutput(0).getScriptPubKey();
+        assertFalse(ScriptPattern.isOpCreate(scriptPubkey0));
+        assertTrue(ScriptPattern.isOpCall(scriptPubkey0));
+        assertEquals(3721087L, scriptPubkey0.getGasLimit());
+        assertEquals(456L, scriptPubkey0.getGasPrice());
+        
+        tx.addOpCallOutput(bytes, addr);
+        final Script scriptPubkey1 = tx.getOutput(1).getScriptPubKey();
+        assertFalse(ScriptPattern.isOpCreate(scriptPubkey1));
+        assertTrue(ScriptPattern.isOpCall(scriptPubkey1));
+        assertEquals(250000L, scriptPubkey1.getGasLimit());
+        assertEquals(40L, scriptPubkey1.getGasPrice());
+
+        assertTrue(ScriptPattern.isContract(scriptPubkey0));
+        assertTrue(ScriptPattern.isContract(scriptPubkey1));
+    }
 
     @Test
     public void getMinNonDustValue() throws Exception {

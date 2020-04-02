@@ -23,6 +23,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.ContractAddress;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.LegacyAddress;
@@ -2266,6 +2267,20 @@ public class WalletTest extends TestWithWallet {
     public void sendRequestP2PKHTest() {
         SendRequest req = SendRequest.to(OTHER_ADDRESS, SATOSHI.multiply(12));
         assertEquals(OTHER_ADDRESS, req.tx.getOutputs().get(0).getScriptPubKey().getToAddress(UNITTEST));
+    }
+
+    @Test
+    public void sendRequestOpCreateTest() {
+        SendRequest req = SendRequest.createContract(UNITTEST, "dummy code".getBytes());
+        assertEquals(2500000L, req.tx.getOutputs().get(0).getScriptPubKey().getGasLimit());
+        assertEquals(40L, req.tx.getOutputs().get(0).getScriptPubKey().getGasPrice());
+    }
+
+    @Test
+    public void sendRequestOpCallTest() {
+        SendRequest req = SendRequest.callContract(UNITTEST, ContractAddress.fromString("0000000000000000000000000000000000000000"), "dummy code".getBytes());
+        assertEquals(2500000L, req.tx.getOutputs().get(0).getScriptPubKey().getGasLimit());
+        assertEquals(40L, req.tx.getOutputs().get(0).getScriptPubKey().getGasPrice());
     }
 
     @Test
