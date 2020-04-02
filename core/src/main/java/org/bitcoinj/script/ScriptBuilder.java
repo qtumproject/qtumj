@@ -19,6 +19,7 @@
 package org.bitcoinj.script;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.ContractAddress;
 import org.bitcoinj.core.LegacyAddress;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.SegwitAddress;
@@ -555,15 +556,15 @@ public class ScriptBuilder {
     }
     
     /**
-     * Creates a script of the OP_CALL opcode. This is for creating transaction calling smart contracts on Qtum.
+     * Creates a script for the OP_CALL opcode. This is for creating transaction calling smart contracts on Qtum.
      */
-    public static Script createOpCallScript(byte[] data, long gasLimit, long gasPrice, byte[] contractAddress) {
+    public static Script createOpCallScript(byte[] data, ContractAddress address, long gasLimit, long gasPrice) {
         ScriptBuilder builder = new ScriptBuilder();
         builder.bigNum(4); // VMVersion
         builder.bigNum(gasLimit);
         builder.bigNum(gasPrice);
         builder.data(data);
-        builder.data(contractAddress);
+        builder.data(address.getBytes());
         builder.op(OP_CALL);
         return builder.build();
     }

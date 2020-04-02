@@ -23,10 +23,13 @@ import org.bitcoin.protocols.payments.Protos.PaymentDetails;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ContractAddress;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
 import org.bitcoinj.wallet.Wallet.MissingSigsMode;
@@ -190,6 +193,42 @@ public class SendRequest {
         SendRequest req = new SendRequest();
         req.tx = new Transaction(params);
         req.tx.addOutput(value, destination);
+        return req;
+    }
+    
+    /**
+     * Creates a new SendRequest to create the given contract.
+     */
+    public static SendRequest createContract(NetworkParameters params, byte[] code) {
+        return createContract(params, code, 2500000L, 40L);
+    }
+
+    /**
+     * Creates a new SendRequest to create the given contract.
+     */
+    public static SendRequest createContract(NetworkParameters params, byte[] code, long gasLimit, long gasPrice) {
+        SendRequest req = new SendRequest();
+        req.tx = new Transaction(params);
+        Script script = ScriptBuilder.createOpCreateScript(code, gasLimit, gasPrice);
+        req.tx.addOutput(Coin.ZERO, script);
+        return req;
+    }
+
+    /**
+     * Creates a new SendRequest to call the given contract with the given code.
+     */
+    public static SendRequest callContract(NetworkParameters params, ContractAddress address, byte[] code) {
+        return callContract(params, address, code, 2500000L, 40L);
+    }
+
+    /**
+     * Creates a new SendRequest to call the given contract with the given code.
+     */
+    public static SendRequest callContract(NetworkParameters params, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        SendRequest req = new SendRequest();
+        req.tx = new Transaction(params);
+        Script script = ScriptBuilder.createOpCallScript(code, address, gasLimit, gasPrice);
+        req.tx.addOutput(Coin.ZERO, script);
         return req;
     }
 

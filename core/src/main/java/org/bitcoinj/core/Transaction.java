@@ -1064,6 +1064,36 @@ public class Transaction extends ChildMessage {
     public TransactionOutput addOutput(Coin value, Script script) {
         return addOutput(new TransactionOutput(params, this, value, script.getProgram()));
     }
+    
+    /**
+     * Creates an output that creates a contract, adds it to this transaction, and returns the new output.
+     */
+    public TransactionOutput addOpCreateOutput(byte[] byteCode) {
+        return addOpCreateOutput(byteCode, 250000L, 40L);
+    }
+
+    /**
+     * Creates an output that creates a contract, adds it to this transaction, and returns the new output.
+     */
+    public TransactionOutput addOpCreateOutput(byte[] byteCode, long gasLimit, long gasPrice) {
+        Script script = ScriptBuilder.createOpCreateScript(byteCode, gasLimit, gasPrice);
+        return addOutput(Coin.ZERO, script);
+    }
+
+    /**
+     * Creates an output that calls a contract, adds it to this transaction, and returns the new output.
+     */
+    public TransactionOutput addOpCallOutput(byte[] byteCode, ContractAddress address) {
+        return addOpCallOutput(byteCode, address, 250000L, 40L);
+    }
+
+    /**
+     * Creates an output that calls a contract, adds it to this transaction, and returns the new output.
+     */
+    public TransactionOutput addOpCallOutput(byte[] byteCode, ContractAddress address, long gasLimit, long gasPrice) {
+        Script script = ScriptBuilder.createOpCallScript(byteCode, address, gasLimit, gasPrice);
+        return addOutput(Coin.ZERO, script);
+    }
 
 
     /**
