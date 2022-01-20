@@ -37,14 +37,20 @@ public class MainNetParams extends AbstractQtumNetParams {
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         targetTimespanV2 = TARGET_TIMESPAN_V2;
+        reducedBlocktimeTimespan = 1000;
         intervalV2 = INTERVAL_V2;
+        stakeTimestampMask = 15;
+        reducedBlocktimeStakeTimestampMask = 3;
         targetSpacing = 128;
+        reducedBlocktimeTargetSpacing = 32;
         powNoRetargeting = true;
         posNoRetargeting = false;
         maxTarget = Utils.decodeCompactBits(0x1f00ffffL);
         posMaxTarget = Utils.decodeCompactBits(0x1d00ffffL);
         qip9POSMaxTarget = Utils.decodeCompactBits(0x1a1fffffL);
+        reducedBlockTimePosMaxTarget = Utils.decodeCompactBits(0x1a3fffffL);
         qip9Height = 466600;
+        reduceBlocktimeHeight = 845000;
         dumpedPrivateKeyHeader = 128;
         addressHeader = 58;
         p2shHeader = 50;
@@ -67,6 +73,7 @@ public class MainNetParams extends AbstractQtumNetParams {
         id = ID_MAINNET;
         subsidyDecreaseBlockCount = 985500;
         spendableCoinbaseDepth = 500;
+        reducedBlockTimeSpendableCoinbaseDepth = 2000;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c"),
                 genesisHash);

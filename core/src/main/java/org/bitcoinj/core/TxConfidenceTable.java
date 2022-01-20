@@ -48,6 +48,7 @@ public class TxConfidenceTable {
     }
     private final Map<Sha256Hash, WeakConfidenceReference> table;
     private final TransactionConfidence.Factory confidenceFactory;
+    private final NetworkParameters params;
 
     // This ReferenceQueue gets entries added to it when they are only weakly reachable, ie, the TxConfidenceTable is the
     // only thing that is tracking the confidence data anymore. We check it from time to time and delete table entries
@@ -64,11 +65,11 @@ public class TxConfidenceTable {
      * usage).
      * @param size Max number of transactions to track. The table will fill up to this size then stop growing.
      */
-    public TxConfidenceTable(final int size) {
-        this(size, new TransactionConfidence.Factory());
+    public TxConfidenceTable(final int size, NetworkParameters params) {
+        this(size, new TransactionConfidence.Factory(), params);
     }
 
-    TxConfidenceTable(final int size, TransactionConfidence.Factory confidenceFactory){
+    TxConfidenceTable(final int size, TransactionConfidence.Factory confidenceFactory, NetworkParameters params){
         table = new LinkedHashMap<Sha256Hash, WeakConfidenceReference>() {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Sha256Hash, WeakConfidenceReference> entry) {
@@ -79,14 +80,15 @@ public class TxConfidenceTable {
         };
         referenceQueue = new ReferenceQueue<>();
         this.confidenceFactory = confidenceFactory;
+        this.params = params;
     }
 
     /**
      * Creates a table that will track at most {@link TxConfidenceTable#MAX_SIZE} entries. You should normally use
      * this constructor.
      */
-    public TxConfidenceTable() {
-        this(MAX_SIZE);
+    public TxConfidenceTable(NetworkParameters params) {
+        this(MAX_SIZE, params);
     }
 
     /**

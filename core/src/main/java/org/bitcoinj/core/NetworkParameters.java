@@ -100,6 +100,7 @@ public abstract class NetworkParameters {
      * The depth of blocks required for a coinbase transaction to be spendable.
      */
     protected int spendableCoinbaseDepth;
+    protected int reducedBlockTimeSpendableCoinbaseDepth;
     protected int subsidyDecreaseBlockCount;
 
     protected String[] dnsSeeds;
@@ -217,6 +218,11 @@ public abstract class NetworkParameters {
     }
 
     public int getSpendableCoinbaseDepth() {
+        throw new RuntimeException("Deprecated: NetworkParameters::getSpendableCoinbaseDepth() requires passing in block height for QTUM");
+    }
+
+    /** How many blocks pass before coinbase are spendable. This value depends on the block height in QTUM **/
+    public int getSpendableCoinbaseDepth(int height) {
         return spendableCoinbaseDepth;
     }
 
@@ -331,6 +337,11 @@ public abstract class NetworkParameters {
 
     /** How many blocks pass between difficulty adjustment periods. Bitcoin standardises this to be 2016. */
     public int getInterval() {
+        throw new RuntimeException("Deprecated: NetworkParameters::getInterval() requires passing in block height for QTUM");
+    }
+
+    /** How many blocks pass between difficulty adjustment periods. This value depends on the block height in QTUM **/
+    public int getInterval(int height) {
         return interval;
     }
 
@@ -498,12 +509,12 @@ public abstract class NetworkParameters {
     public abstract int getProtocolVersionNum(final ProtocolVersion version);
 
     public static enum ProtocolVersion {
-        MINIMUM(70017),
+        MINIMUM(70019),
         PONG(60001),
         BLOOM_FILTER(70000), // BIP37
         BLOOM_FILTER_BIP111(70011), // BIP111
         WITNESS_VERSION(70012),
-        CURRENT(70017);
+        CURRENT(70019);
 
         private final int qtumProtocol;
 

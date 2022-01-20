@@ -72,7 +72,7 @@ public class Context {
      */
     public Context(NetworkParameters params, int eventHorizon, Coin feePerKb, boolean ensureMinRequiredFee) {
         log.info("Creating bitcoinj {} context.", VersionMessage.BITCOINJ_VERSION);
-        this.confidenceTable = new TxConfidenceTable();
+        this.confidenceTable = new TxConfidenceTable(params);
         this.params = params;
         this.eventHorizon = eventHorizon;
         this.ensureMinRequiredFee = ensureMinRequiredFee;

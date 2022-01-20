@@ -198,7 +198,7 @@ public class FullBlockTestGenerator {
         spendableOutputs.offer(new TransactionOutPointWithValue(
                 new TransactionOutPoint(params, 0, chainHead.getTransactions().get(0).getTxId()),
                 FIFTY_COINS, chainHead.getTransactions().get(0).getOutputs().get(0).getScriptPubKey()));
-        for (int i = 1; i < params.getSpendableCoinbaseDepth(); i++) {
+        for (int i = 1; i < params.getSpendableCoinbaseDepth(chainHeadHeight); i++) {
             chainHead = chainHead.createNextBlockWithCoinbase(Block.BLOCK_VERSION_GENESIS, coinbaseOutKeyPubKey, chainHeadHeight);
             chainHeadHeight++;
             blocks.add(new BlockAndValidity(chainHead, true, false, chainHead.getHash(), i+1, "Initial Block chain output generation"));
@@ -1872,7 +1872,7 @@ public class FullBlockTestGenerator {
                     for (TransactionInput in : t.getInputs()) {
                         Sha256Hash blockSpendingHash = coinbaseBlockMap.get(in.getOutpoint().getHash());
                         checkState(blockSpendingHash == null || blockToHeightMap.get(blockSpendingHash) == null ||
-                                blockToHeightMap.get(blockSpendingHash) == blockHeight - params.getSpendableCoinbaseDepth());
+                                blockToHeightMap.get(blockSpendingHash) == blockHeight - params.getSpendableCoinbaseDepth(blockHeight));
                     }
             }
         }

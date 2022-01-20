@@ -37,14 +37,20 @@ public class UnitTestParams extends AbstractQtumNetParams {
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         targetTimespanV2 = TARGET_TIMESPAN_V2;
+        reducedBlocktimeTimespan = 1000;
         intervalV2 = INTERVAL_V2;
+        stakeTimestampMask = 15;
+        reducedBlocktimeStakeTimestampMask = 3;
         targetSpacing = 128;
+        reducedBlocktimeTargetSpacing = 32;
         powNoRetargeting = true;
         posNoRetargeting = false;
         maxTarget = new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
         posMaxTarget = Utils.decodeCompactBits(0x1f00ffffL);
         qip9POSMaxTarget = Utils.decodeCompactBits(0x1a1fffffL);
+        reducedBlockTimePosMaxTarget = Utils.decodeCompactBits(0x1a3fffffL);
         qip9Height = 446320;
+        reduceBlocktimeHeight = 806600;
         port = 13888;
         addressHeader = 120;
         p2shHeader = 110;
@@ -55,6 +61,7 @@ public class UnitTestParams extends AbstractQtumNetParams {
         genesisBlock.solve();
 
         spendableCoinbaseDepth = 5;
+        reducedBlockTimeSpendableCoinbaseDepth = 5;
         subsidyDecreaseBlockCount = 100;
         dnsSeeds = null;
         addrSeeds = null;

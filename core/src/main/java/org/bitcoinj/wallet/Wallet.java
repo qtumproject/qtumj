@@ -4484,7 +4484,7 @@ public class Wallet extends BaseTaggableObject
                 boolean coinbase = output.isCoinbase();
                 int depth = chainHeight - output.getHeight() + 1; // the current depth of the output (1 = same as head).
                 // Do not try and spend coinbases that were mined too recently, the protocol forbids it.
-                if (!excludeImmatureCoinbases || !coinbase || depth >= params.getSpendableCoinbaseDepth()) {
+                if (!excludeImmatureCoinbases || !coinbase || depth >= params.getSpendableCoinbaseDepth(chainHeight)) {
                     candidates.add(new FreeStandingTransactionOutput(params, output, chainHeight));
                 }
             }

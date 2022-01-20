@@ -28,12 +28,18 @@ public abstract class AbstractQtumNetParams extends NetworkParameters {
     protected boolean powNoRetargeting;
     protected boolean posNoRetargeting;
     protected int targetTimespanV2;
+    protected int reducedBlocktimeTimespan;
     protected int targetSpacing;
+    protected int reducedBlocktimeTargetSpacing;
     protected int intervalV2;
+    protected int stakeTimestampMask;
+    protected int reducedBlocktimeStakeTimestampMask;
     protected BigInteger posMaxTarget;
     protected BigInteger qip9POSMaxTarget;
+    protected BigInteger reducedBlockTimePosMaxTarget;
 
     protected long qip9Height;
+    protected long reduceBlocktimeHeight;
 
     private static final Logger log = LoggerFactory.getLogger(AbstractQtumNetParams.class);
 
@@ -109,11 +115,59 @@ public abstract class AbstractQtumNetParams extends NetworkParameters {
         return targetTimespanV2;
     }
 
+    public int getTimespan(int height) {
+        if (height < qip9Height) {
+            return targetTimespan;
+        } else if (height < reduceBlocktimeHeight) {
+            return targetTimespanV2;
+        } else {
+            return reducedBlocktimeTimespan;
+        }
+    }
+
+    @Override
+    public int getInterval(int height) {
+        int targetTimespan = getTimespan(height);
+        int targetSpacing = getTargetSpacing(height);
+        return targetTimespan / targetSpacing;
+    }
+
+    @Override
+    public int getSpendableCoinbaseDepth(int height) {
+        if (height < reduceBlocktimeHeight) {
+            return spendableCoinbaseDepth;
+        } else {
+            return reducedBlockTimeSpendableCoinbaseDepth;
+        }
+    }
+
+    public int getStakeTimestampMask(int height) {
+        if (height < reduceBlocktimeHeight) {
+            return stakeTimestampMask;
+        } else {
+            return reducedBlocktimeStakeTimestampMask;
+        }
+    }
+
     private BigInteger getLimit(int height, boolean isProofOfStake) {
         if (isProofOfStake) {
-            return height >= qip9Height ? qip9POSMaxTarget : posMaxTarget;
+            if (height < qip9Height) {
+                return posMaxTarget;
+            } else if (height < reduceBlocktimeHeight) {
+                return qip9POSMaxTarget;
+            } else {
+                return reducedBlockTimePosMaxTarget;
+            }
         } else {
             return maxTarget;
+        }
+    }
+
+    private int getTargetSpacing(int height) {
+        if (height < reduceBlocktimeHeight) {
+            return targetSpacing;
+        } else {
+            return reducedBlocktimeTargetSpacing;
         }
     }
 
@@ -141,23 +195,26 @@ public abstract class AbstractQtumNetParams extends NetworkParameters {
 
         long actualSpacing = prev.getHeader().getTimeSeconds() - prevPrev.getHeader().getTimeSeconds();
 
+        int targetSpacing = getTargetSpacing(last.getHeight() + 1);
+        int interval = getInterval(last.getHeight() + 1);
         if (last.getHeight() + 1 < qip9Height) {
             if (actualSpacing < 0) {
                 actualSpacing = targetSpacing;
             }
-            if (actualSpacing > targetSpacing * 10) {
-                actualSpacing = targetSpacing * 10;
+            if (actualSpacing > (long)targetSpacing * 10) {
+                actualSpacing = (long)targetSpacing * 10;
             }
-            newTarget = newTarget.multiply(BigInteger.valueOf((interval - 1) * targetSpacing + (actualSpacing << 1)));
-            newTarget = newTarget.divide(BigInteger.valueOf((interval + 1) * targetSpacing));
+            newTarget = newTarget.multiply(BigInteger.valueOf((interval - 1) * (long)targetSpacing + (actualSpacing << 1)));
+            newTarget = newTarget.divide(BigInteger.valueOf((interval + 1) * (long)targetSpacing));
         } else {
             if (actualSpacing < 0) {
                 actualSpacing = targetSpacing;
             }
-            if (actualSpacing > targetSpacing * 20) {
-                actualSpacing = targetSpacing * 20;
+            if (actualSpacing > (long)targetSpacing * 20) {
+                actualSpacing = (long)targetSpacing * 20;
             }
-            newTarget = mulExp(newTarget, 2 * (actualSpacing - targetSpacing) / 16, (intervalV2 + 1) * targetSpacing / 16);
+            int stakeTimestampMask = getStakeTimestampMask(last.getHeight() + 1);
+            newTarget = mulExp(newTarget, 2 * (actualSpacing - targetSpacing) / (stakeTimestampMask + 1), (interval + 1) * (long)targetSpacing / (stakeTimestampMask + 1));
         }
 
         if (newTarget.compareTo(BigInteger.ZERO) <= 0 || newTarget.compareTo(maxTarget) > 0) {

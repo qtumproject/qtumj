@@ -36,14 +36,20 @@ public class TestNet3Params extends AbstractQtumNetParams {
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         targetTimespanV2 = TARGET_TIMESPAN_V2;
+        reducedBlocktimeTimespan = 1000;
         intervalV2 = INTERVAL_V2;
+        stakeTimestampMask = 15;
+        reducedBlocktimeStakeTimestampMask = 3;
         targetSpacing = 128;
+        reducedBlocktimeTargetSpacing = 32;
         powNoRetargeting = true;
         posNoRetargeting = false;
         maxTarget = Utils.decodeCompactBits(0x1f00ffffL);
         posMaxTarget = Utils.decodeCompactBits(0x1f00ffffL);
         qip9POSMaxTarget = Utils.decodeCompactBits(0x1a1fffffL);
+        reducedBlockTimePosMaxTarget = Utils.decodeCompactBits(0x1a3fffffL);
         qip9Height = 446320;
+        reduceBlocktimeHeight = 806600;
         port = 13888;
         addressHeader = 120;
         p2shHeader = 110;
@@ -54,6 +60,7 @@ public class TestNet3Params extends AbstractQtumNetParams {
         genesisBlock.setNonce(7349697);
 
         spendableCoinbaseDepth = 500;
+        reducedBlockTimeSpendableCoinbaseDepth = 2000;
         subsidyDecreaseBlockCount = 985500;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("0000e803ee215c0684ca0d2f9220594d3f828617972aad66feb2ba51f5e14222"));

@@ -17,8 +17,6 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.Block;
-
 import java.math.BigInteger;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -36,14 +34,20 @@ public class RegTestParams extends AbstractQtumNetParams {
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
         targetTimespanV2 = TARGET_TIMESPAN_V2;
+        reducedBlocktimeTimespan = 1000;
         intervalV2 = INTERVAL_V2;
+        stakeTimestampMask = 15;
+        reducedBlocktimeStakeTimestampMask = 3;
         targetSpacing = 128;
+        reducedBlocktimeTargetSpacing = 32;
         powNoRetargeting = true;
         posNoRetargeting = true;
         maxTarget = MAX_TARGET;
         posMaxTarget = MAX_TARGET;
         qip9POSMaxTarget = MAX_TARGET;
+        reducedBlockTimePosMaxTarget = MAX_TARGET;
         qip9Height = 0;
+        reduceBlocktimeHeight = 0;
         port = 23888;
         addressHeader = 120;
         p2shHeader = 110;
@@ -54,6 +58,7 @@ public class RegTestParams extends AbstractQtumNetParams {
         genesisBlock.setNonce(17);
 
         spendableCoinbaseDepth = 500;
+        reducedBlockTimeSpendableCoinbaseDepth = 2000;
         subsidyDecreaseBlockCount = 150;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("665ed5b402ac0b44efc37d8926332994363e8a7278b7ee9a58fb972efadae943"));
@@ -76,22 +81,6 @@ public class RegTestParams extends AbstractQtumNetParams {
     @Override
     public boolean allowEmptyPeerChain() {
         return true;
-    }
-
-    private static Block genesis;
-
-    @Override
-    public Block getGenesisBlock() {
-        synchronized (RegTestParams.class) {
-            if (genesis == null) {
-                genesis = super.getGenesisBlock();
-                genesis.setNonce(2);
-                genesis.setDifficultyTarget(0x207fFFFFL);
-                genesis.setTime(1296688602L);
-                checkState(genesis.getHashAsString().toLowerCase().equals("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
-            }
-            return genesis;
-        }
     }
 
     private static RegTestParams instance;

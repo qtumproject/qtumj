@@ -161,7 +161,7 @@ public class BlockChainTest {
         // artificially shortened period.
         Block prev = UNITTEST.getGenesisBlock();
         Utils.setMockClock(Utils.currentTimeSeconds());
-        for (int height = 0; height < UNITTEST.getInterval() - 1; height++) {
+        for (int height = 0; height < UNITTEST.getInterval(1) - 1; height++) {
             Block newBlock = prev.createNextBlock(coinbaseTo, 1, Utils.currentTimeSeconds(), height);
             assertTrue(chain.add(newBlock));
             prev = newBlock;
@@ -170,13 +170,13 @@ public class BlockChainTest {
         }
         // Now add another block that has no difficulty adjustment, it should be rejected.
         try {
-            chain.add(prev.createNextBlock(coinbaseTo, 1, Utils.currentTimeSeconds(), UNITTEST.getInterval()));
+            chain.add(prev.createNextBlock(coinbaseTo, 1, Utils.currentTimeSeconds(), UNITTEST.getInterval(1)));
             fail();
         } catch (VerificationException e) {
         }
         // Create a new block with the right difficulty target given our blistering speed relative to the huge amount
         // of time it's supposed to take (set in the unit test network parameters).
-        Block b = prev.createNextBlock(coinbaseTo, 1, Utils.currentTimeSeconds(), UNITTEST.getInterval() + 1);
+        Block b = prev.createNextBlock(coinbaseTo, 1, Utils.currentTimeSeconds(), UNITTEST.getInterval(1) + 1);
         b.setDifficultyTarget(0x201fFFFFL);
         b.solve();
         assertTrue(chain.add(b));
@@ -335,7 +335,7 @@ public class BlockChainTest {
         }
 
         // Check that the coinbase is unavailable to spend for the next spendableCoinbaseDepth - 2 blocks.
-        for (int i = 0; i < UNITTEST.getSpendableCoinbaseDepth() - 2; i++) {
+        for (int i = 0; i < UNITTEST.getSpendableCoinbaseDepth(height) - 2; i++) {
             // Non relevant tx - just for fake block creation.
             Transaction tx2 = createFakeTx(UNITTEST, COIN, LegacyAddress.fromKey(UNITTEST, new ECKey()));
 

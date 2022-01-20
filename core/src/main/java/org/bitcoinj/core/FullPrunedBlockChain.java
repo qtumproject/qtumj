@@ -265,7 +265,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                         // chains. The assumption is there will ~never be re-orgs deeper than the spendable coinbase
                         // chain depth.
                         if (prevOut.isCoinbase()) {
-                            if (height - prevOut.getHeight() < params.getSpendableCoinbaseDepth()) {
+                            if (height - prevOut.getHeight() < params.getSpendableCoinbaseDepth(prevOut.getHeight())) {
                                 throw new VerificationException("Tried to spend coinbase at depth " + (height - prevOut.getHeight()));
                             }
                         }
@@ -396,7 +396,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                                     in.getOutpoint().getIndex());
                             if (prevOut == null)
                                 throw new VerificationException("Attempted spend of a non-existent or already spent output!");
-                            if (prevOut.isCoinbase() && newBlock.getHeight() - prevOut.getHeight() < params.getSpendableCoinbaseDepth())
+                            if (prevOut.isCoinbase() && newBlock.getHeight() - prevOut.getHeight() < params.getSpendableCoinbaseDepth(prevOut.getHeight()))
                                 throw new VerificationException("Tried to spend coinbase at depth " + (newBlock.getHeight() - prevOut.getHeight()));
                             valueIn = valueIn.add(prevOut.getValue());
                             if (verifyFlags.contains(VerifyFlag.P2SH)) {

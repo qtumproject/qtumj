@@ -115,7 +115,7 @@ public class TxConfidenceTableTest {
 
         replay(factory, brokenConfidence, correctConfidence);
 
-        TxConfidenceTable table = new TxConfidenceTable(1, factory);
+        TxConfidenceTable table = new TxConfidenceTable(1, factory, UnitTestParams.get());
 
         try {
             table.seen(brokenHash, peer);

@@ -595,7 +595,7 @@ public class ChainSplitTest {
 
         // Add blocks to b3 until we can spend the coinbase.
         Block firstTip = b3;
-        for (int i = 0; i < UNITTEST.getSpendableCoinbaseDepth() - 2; i++) {
+        for (int i = 0; i < UNITTEST.getSpendableCoinbaseDepth(1) - 2; i++) {
             firstTip = firstTip.createNextBlock(someOtherGuy);
             chain.add(firstTip);
         }
@@ -628,7 +628,7 @@ public class ChainSplitTest {
         assertTrue(chain.add(b6));
 
         Block secondTip = b6;
-        for (int i = 0; i < UNITTEST.getSpendableCoinbaseDepth() - 2; i++) {
+        for (int i = 0; i < UNITTEST.getSpendableCoinbaseDepth(1) - 2; i++) {
             secondTip = secondTip.createNextBlock(someOtherGuy);
             chain.add(secondTip);
         }
