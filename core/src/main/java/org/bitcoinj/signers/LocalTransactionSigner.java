@@ -17,26 +17,23 @@
 
 package org.bitcoinj.signers;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.LegacyAddress;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.TransactionWitness;
+import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptBuilder;
-import org.bitcoinj.script.ScriptException;
-import org.bitcoinj.script.ScriptPattern;
+import org.bitcoinj.script.*;
 import org.bitcoinj.script.Script.VerifyFlag;
 import org.bitcoinj.wallet.KeyBag;
 import org.bitcoinj.wallet.RedeemData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.bitcoinj.script.ScriptOpCodes.OP_SENDER;
 
 /**
  * <p>{@link TransactionSigner} implementation for signing inputs using keys from provided {@link KeyBag}.</p>
@@ -68,6 +65,67 @@ public class LocalTransactionSigner implements TransactionSigner {
     @Override
     public boolean signInputs(ProposedTransaction propTx, KeyBag keyBag) {
         Transaction tx = propTx.partialTx;
+
+        int numOutputs = tx.getOutputs().size();
+        for (int i = 0; i < numOutputs; i++) {
+            TransactionOutput txOut = tx.getOutputs().get(i);
+            // iterate over txOut script and find OP_SENDER
+            Script txOutScript = txOut.getScriptPubKey();
+            if (ScriptPattern.isOpSender(txOutScript)) {
+                if (!ScriptPattern.isOpSenderSigned(txOutScript)) {
+                    List<ScriptChunk> chunks = txOutScript.getChunks();
+                    ScriptChunk opSenderPubKeyHash = chunks.get(1);
+                    ECKey opSenderKey = keyBag.findKeyFromPubKeyHash(opSenderPubKeyHash.data, Script.ScriptType.P2SH);
+                    if (opSenderKey == null) {
+                        log.warn("No private key in keypair for output {} - {}", i, opSenderPubKeyHash.data.toString());
+                        continue;
+                    }
+                    Script inputScriptCode = ScriptBuilder.createP2PKHOutputScript(opSenderKey.getPubKeyHash());
+                    TransactionSignature signature = tx.calculateOpSenderSignature(i, opSenderKey, inputScriptCode, Transaction.SigHash.ALL,
+                            false);
+                    ScriptBuilder signedOpSenderScript = new ScriptBuilder();
+                    for (int j = 0; j < chunks.size(); j++) {
+                        if (j == 2) {
+                            // signature gets added to chunk index 2
+                            ScriptBuilder opSenderSignatureScriptBuilder = new ScriptBuilder();
+                            ByteArrayOutputStream derEncodedSignatureAndSighash = new ByteArrayOutputStream();
+                            try {
+                                derEncodedSignatureAndSighash.write(signature.encodeToDER());
+                                derEncodedSignatureAndSighash.write(Transaction.SigHash.ALL.byteValue());
+                            } catch (IOException e) {
+                                throw new RuntimeException(e); // Cannot happen
+                            }
+
+                            opSenderSignatureScriptBuilder.data(derEncodedSignatureAndSighash.toByteArray());
+                            opSenderSignatureScriptBuilder.data(opSenderKey.getPubKey());
+                            ByteArrayOutputStream serializedOpSenderSignature = new ByteArrayOutputStream();
+                            byte[] program = opSenderSignatureScriptBuilder.build().getProgram();
+                            try {
+                                serializedOpSenderSignature.write(new VarInt(program.length).encode());
+                                serializedOpSenderSignature.write(program);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e); // Cannot happen
+                            }
+
+                            signedOpSenderScript.data(serializedOpSenderSignature.toByteArray());
+                        } else {
+                            signedOpSenderScript.addChunk(chunks.get(j));
+                        }
+                    }
+                    TransactionOutput signedOpSenderTxOut = new TransactionOutput(txOut.getParams(), txOut.getParentTransaction(), txOut.getValue(), signedOpSenderScript.build().getProgram());
+                    List<TransactionOutput> outputs = new ArrayList<>(tx.getOutputs());
+                    tx.clearOutputs();
+                    for (int j = 0; j < outputs.size(); j++) {
+                        if (j == i) {
+                            tx.addOutput(signedOpSenderTxOut);
+                        } else {
+                            tx.addOutput(outputs.get(j));
+                        }
+                    }
+                }
+            }
+        }
+
         int numInputs = tx.getInputs().size();
         for (int i = 0; i < numInputs; i++) {
             TransactionInput txIn = tx.getInput(i);

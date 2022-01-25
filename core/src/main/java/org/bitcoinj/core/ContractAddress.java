@@ -26,6 +26,22 @@ public class ContractAddress {
     public static ContractAddress fromBytes(byte[] addr) {
         return new ContractAddress(addr);
     }
+
+    /**
+     * Computes the address a contract will be deployed at with an OP_CREATE TransactionOutPoint and vout index
+     * @param transactionOutPointHash TransactionOutPoint.getHash()
+     * @param voutIndex Index of the vout in the signed transaction
+     * @return the address a contract will be deployed at
+     */
+    public static ContractAddress fromOutPointHash(Sha256Hash transactionOutPointHash, long voutIndex) {
+        byte[] hashBytes = transactionOutPointHash.getReversedBytes();
+        // 4 bytes, little endian
+        byte[] hashBytesWithVoutIndex = new byte[hashBytes.length + 4];
+        // a transaction won't ever have enough vouts to reach two bytes, so we can ignore the other 3 bytes
+        hashBytesWithVoutIndex[hashBytesWithVoutIndex.length - 4] = Long.valueOf(voutIndex).byteValue();
+        System.arraycopy(hashBytes, 0, hashBytesWithVoutIndex, 0, hashBytes.length);
+        return new ContractAddress(Utils.sha256hash160(hashBytesWithVoutIndex));
+    }
     
     public byte[] getBytes() {
         return bytes;

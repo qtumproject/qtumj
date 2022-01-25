@@ -22,6 +22,7 @@ import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.ScriptType;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.script.ScriptError;
 import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.script.ScriptOpCodes;
@@ -45,6 +46,8 @@ import java.util.*;
 import static org.bitcoinj.core.Utils.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.script.ScriptOpCodes.OP_SENDER;
+
 import java.math.BigInteger;
 
 /**
@@ -1080,6 +1083,43 @@ public class Transaction extends ChildMessage {
         return addOutput(Coin.ZERO, script);
     }
 
+    public TransactionOutput addOpCreateOutput(byte[] byteCode, ECKey opSender, long gasLimit, long gasPrice) {
+        Script script = ScriptBuilder.createOpCreateScript(byteCode, opSender, gasLimit, gasPrice);
+        return addOutput(Coin.ZERO, script);
+    }
+
+    /**
+     * Return all contracts that will be deployed from this transaction
+     * The transaction must be complete and signed
+     * @return List of ContractAddress objects in order of vouts
+     */
+    public List<ContractAddress> getOpCreateContractAddresses() {
+        List<ContractAddress> contractAddresses = new ArrayList<>();
+        List<TransactionOutput> outputs = getOutputs();
+        for (int vout = 0; vout < outputs.size(); vout++) {
+            TransactionOutput output = outputs.get(vout);
+            if (ScriptPattern.isOpCreate(output.getScriptPubKey())) {
+                TransactionOutPoint outPoint = output.getOutPointFor();
+                contractAddresses.add(ContractAddress.fromOutPointHash(outPoint.getHash(), vout));
+            }
+        }
+        return contractAddresses;
+    }
+
+    /**
+     * Get the address of a contract being deployed with nth output
+     * @param voutIndex index of the output
+     * @return if output is not an OP_CREATE script, return null
+     */
+    public ContractAddress getOpCreateContractAddress(int voutIndex) {
+        TransactionOutput output = getOutput(voutIndex);
+        if (ScriptPattern.isOpCreate(output.getScriptPubKey())) {
+            TransactionOutPoint outPoint = output.getOutPointFor();
+            return ContractAddress.fromOutPointHash(outPoint.getHash(), voutIndex);
+        }
+        return null;
+    }
+
     /**
      * Creates an output that calls a contract, adds it to this transaction, and returns the new output.
      */
@@ -1095,6 +1135,13 @@ public class Transaction extends ChildMessage {
         return addOutput(Coin.ZERO, script);
     }
 
+    /**
+     * Creates an output that calls a contract, adds it to this transaction, and returns the new output.
+     */
+    public TransactionOutput addOpCallOutput(byte[] byteCode, ECKey opSender, ContractAddress address, long gasLimit, long gasPrice) {
+        Script script = ScriptBuilder.createOpCallScript(byteCode, opSender, address, gasLimit, gasPrice);
+        return addOutput(Coin.ZERO, script);
+    }
 
     /**
      * Calculates a signature that is valid for being inserted into the input at the given position. This is simply
@@ -1175,6 +1222,42 @@ public class Transaction extends ChildMessage {
                                                    Script redeemScript,
                                                    SigHash hashType, boolean anyoneCanPay) {
         Sha256Hash hash = hashForSignature(inputIndex, redeemScript.getProgram(), hashType, anyoneCanPay);
+        return new TransactionSignature(key.sign(hash, aesKey), hashType, anyoneCanPay);
+    }
+
+    /**
+     * Calculates a signature that is a valid OP_SENDER signature for the specified output and sender.
+     * Not thread safe
+     * @param outputIndex index of vout to compute signature for
+     * @param key Private key of the account to sign OP_SENDER with
+     * @param redeemScript The scriptPubKey that is being satisfied, or the P2SH redeem script.
+     * @param hashType Signing mode, see the enum for documentation.
+     * @param anyoneCanPay  Signing mode, see the SigHash enum for documentation.
+     * @return A newly calculated signature object that wraps the r, s and sighash components.
+     */
+    public TransactionSignature calculateOpSenderSignature(int outputIndex, ECKey key,
+                                                           Script redeemScript,
+                                                           SigHash hashType, boolean anyoneCanPay) {
+        Sha256Hash hash = hashForOpSenderSignature(outputIndex, redeemScript.getProgram(), outputs.get(outputIndex).getValue(), hashType, anyoneCanPay);
+        return new TransactionSignature(key.sign(hash), hashType, anyoneCanPay);
+    }
+
+    /**
+     * Calculates a signature that is a valid OP_SENDER signature for the specified output and sender.
+     * Not thread safe
+     * @param outputIndex index of vout to compute signature for
+     * @param key Private key of the account to sign OP_SENDER with
+     * @param aesKey decrypt private key with specified aes key
+     * @param redeemScript The scriptPubKey that is being satisfied, or the P2SH redeem script.
+     * @param hashType Signing mode, see the enum for documentation.
+     * @param anyoneCanPay  Signing mode, see the SigHash enum for documentation.
+     * @return A newly calculated signature object that wraps the r, s and sighash components.
+     */
+    public TransactionSignature calculateOpSenderSignature(int outputIndex, ECKey key,
+                                                           @Nullable KeyParameter aesKey,
+                                                           Script redeemScript,
+                                                           SigHash hashType, boolean anyoneCanPay) {
+        Sha256Hash hash = hashForOpSenderSignature(outputIndex, redeemScript.getProgram(), outputs.get(outputIndex).getValue(), hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash, aesKey), hashType, anyoneCanPay);
     }
 
@@ -1456,6 +1539,150 @@ public class Transaction extends ChildMessage {
         }
 
         return Sha256Hash.twiceOf(bos.toByteArray());
+    }
+
+    public synchronized Sha256Hash hashForOpSenderSignature(
+            int outputIndex,
+            Script scriptCode,
+            Coin prevValue,
+            SigHash type,
+            boolean anyoneCanPay) {
+        return hashForOpSenderSignature(outputIndex, scriptCode.getProgram(), prevValue, type, anyoneCanPay);
+    }
+
+    /**
+     * <p>Calculates a signature hash for OP_SENDER outputs</p>
+     * @param outputIndex  output the signature is being calculated for. Tx signatures are always relative to an input.
+     * @param scriptCode   the script that should be in the given input during signing.
+     * @param prevValue    the value of the coin being spent
+     * @param type
+     * @param anyoneCanPay
+     * @return
+     */
+    public synchronized Sha256Hash hashForOpSenderSignature(
+            int outputIndex,
+            byte[] scriptCode,
+            Coin prevValue,
+            SigHash type,
+            boolean anyoneCanPay) {
+        int sigHash = TransactionSignature.calcSigHashValue(type, anyoneCanPay);
+        return hashForOpSenderSignature(outputIndex, scriptCode, prevValue, (byte) sigHash);
+    }
+
+    public synchronized Sha256Hash hashForOpSenderSignature(
+            int outputIndex,
+            byte[] scriptCode,
+            Coin prevValue,
+            byte sigHashType){
+        ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(length == UNKNOWN_LENGTH ? 256 : length + 4);
+        try {
+            byte[] hashPrevouts = new byte[32];
+            byte[] hashSequence = new byte[32];
+            byte[] hashOutputs = new byte[32];
+            int basicSigHashType = sigHashType & 0x1f;
+            boolean anyoneCanPay = (sigHashType & SigHash.ANYONECANPAY.value) == SigHash.ANYONECANPAY.value;
+            boolean signAll = (basicSigHashType != SigHash.SINGLE.value) && (basicSigHashType != SigHash.NONE.value);
+
+            if (!anyoneCanPay) {
+                ByteArrayOutputStream bosHashPrevouts = new UnsafeByteArrayOutputStream(256);
+                for (int i = 0; i < this.inputs.size(); ++i) {
+                    bosHashPrevouts.write(this.inputs.get(i).getOutpoint().getHash().getReversedBytes());
+                    uint32ToByteStreamLE(this.inputs.get(i).getOutpoint().getIndex(), bosHashPrevouts);
+                }
+                hashPrevouts = Sha256Hash.hashTwice(bosHashPrevouts.toByteArray());
+            } else {
+                // ANYONECANPAY is changed to only hash the first input
+                ByteArrayOutputStream bosHashPrevouts = new UnsafeByteArrayOutputStream(256);
+                for (int i = 0; i < 1; ++i) {
+                    bosHashPrevouts.write(this.inputs.get(i).getOutpoint().getHash().getReversedBytes());
+                    uint32ToByteStreamLE(this.inputs.get(i).getOutpoint().getIndex(), bosHashPrevouts);
+                }
+                hashPrevouts = Sha256Hash.hashTwice(bosHashPrevouts.toByteArray());
+
+                ByteArrayOutputStream bosSequence = new UnsafeByteArrayOutputStream(256);
+                for (int i = 0; i < 1; ++i) {
+                    uint32ToByteStreamLE(this.inputs.get(i).getSequenceNumber(), bosSequence);
+                }
+                hashSequence = Sha256Hash.hashTwice(bosSequence.toByteArray());
+            }
+
+            if (!anyoneCanPay && signAll) {
+                ByteArrayOutputStream bosSequence = new UnsafeByteArrayOutputStream(256);
+                for (int i = 0; i < this.inputs.size(); ++i) {
+                    uint32ToByteStreamLE(this.inputs.get(i).getSequenceNumber(), bosSequence);
+                }
+                hashSequence = Sha256Hash.hashTwice(bosSequence.toByteArray());
+            }
+
+            if (signAll) {
+                ByteArrayOutputStream bosHashOutputs = new UnsafeByteArrayOutputStream(256);
+                for (int i = 0; i < this.outputs.size(); ++i) {
+                    TransactionOutput output = getOutputWithoutSenderSig(this.outputs.get(i));
+                    uint64ToByteStreamLE(
+                            BigInteger.valueOf(output.getValue().getValue()),
+                            bosHashOutputs
+                    );
+                    bosHashOutputs.write(new VarInt(output.getScriptBytes().length).encode());
+                    bosHashOutputs.write(output.getScriptBytes());
+                }
+                hashOutputs = Sha256Hash.hashTwice(bosHashOutputs.toByteArray());
+            } else if (basicSigHashType == SigHash.SINGLE.value && outputIndex < outputs.size()) {
+                ByteArrayOutputStream bosHashOutputs = new UnsafeByteArrayOutputStream(256);
+                TransactionOutput output = getOutputWithoutSenderSig(this.outputs.get(outputIndex));
+                uint64ToByteStreamLE(
+                        BigInteger.valueOf(output.getValue().getValue()),
+                        bosHashOutputs
+                );
+                bosHashOutputs.write(new VarInt(output.getScriptBytes().length).encode());
+                bosHashOutputs.write(output.getScriptBytes());
+                hashOutputs = Sha256Hash.hashTwice(bosHashOutputs.toByteArray());
+            }
+            uint32ToByteStreamLE(version, bos);
+            bos.write(hashPrevouts);
+            bos.write(hashSequence);
+            TransactionOutput output = getOutputWithoutSenderSig(this.outputs.get(outputIndex));
+            uint64ToByteStreamLE(BigInteger.valueOf(output.getValue().getValue()), bos);
+            bos.write(new VarInt(output.getScriptBytes().length).encode());
+            bos.write(output.getScriptBytes());
+            bos.write(new VarInt(scriptCode.length).encode());
+            bos.write(scriptCode);
+            uint64ToByteStreamLE(BigInteger.valueOf(prevValue.getValue()), bos);
+            bos.write(hashOutputs);
+            uint32ToByteStreamLE(this.lockTime, bos);
+            uint32ToByteStreamLE(0x000000ff & sigHashType, bos);
+        } catch (IOException e) {
+            throw new RuntimeException(e);  // Cannot happen.
+        }
+
+        return Sha256Hash.twiceOf(bos.toByteArray());
+    }
+
+    private TransactionOutput getOutputWithoutSenderSig(TransactionOutput output) {
+        Script outputScript = new Script(output.getScriptBytes());
+        int opSenderIndex = -1;
+        List<ScriptChunk> chunks = outputScript.getChunks();
+        for (int i = 0; i < chunks.size(); i++) {
+            if (chunks.get(i).equalsOpCode(OP_SENDER)) {
+                opSenderIndex = i;
+                break;
+            }
+        }
+
+        if (opSenderIndex > 0) {
+            ScriptBuilder outputScriptBuilderWithoutSenderSig = new ScriptBuilder();
+            for (int i = 0; i < chunks.size(); i++) {
+                if (i == opSenderIndex - 1) {
+                    outputScriptBuilderWithoutSenderSig.data(new byte[]{});
+                } else {
+                    outputScriptBuilderWithoutSenderSig.addChunk(chunks.get(i));
+                }
+            }
+            Script outputScriptWithoutSenderSig = outputScriptBuilderWithoutSenderSig.build();
+            outputScriptWithoutSenderSig.setCreationTimeSeconds(outputScript.getCreationTimeSeconds());
+            return new TransactionOutput(output.getParams(), output.getParentTransaction(), output.getValue(), outputScriptWithoutSenderSig.getProgram());
+        } else {
+            return new TransactionOutput(output.getParams(), output.getParentTransaction(), output.getValue(), output.getScriptBytes());
+        }
     }
 
     @Override

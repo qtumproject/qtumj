@@ -176,7 +176,27 @@ public class SendRequest {
         SendRequest req = new SendRequest();
         final NetworkParameters parameters = destination.getParameters();
         checkNotNull(parameters, "Address is for an unknown network");
-        req.tx = new Transaction(parameters);
+        if (req.tx == null) {
+            req.tx = new Transaction(parameters);
+        }
+        req.tx.addOutput(value, destination);
+        return req;
+    }
+
+    public static SendRequest to(SendRequest req, Address destination, Coin value) {
+        return to(req, getNetworkParameters(req), destination, value);
+    }
+
+    public static SendRequest to(SendRequest req, NetworkParameters parameters, Address destination, Coin value) {
+        final NetworkParameters destinationParameters = destination.getParameters();
+        checkNotNull(destinationParameters, "Address is for an unknown network");
+        if (!parameters.equals(destinationParameters)) {
+            // TODO: Different exception type
+            throw new RuntimeException("Address is for different network than SendRequest");
+        }
+        if (req.tx == null) {
+            req.tx = new Transaction(parameters);
+        }
         req.tx.addOutput(value, destination);
         return req;
     }
@@ -190,8 +210,17 @@ public class SendRequest {
      * in a smaller output, and thus the ability to use a smaller output value without rejection.</p>
      */
     public static SendRequest to(NetworkParameters params, ECKey destination, Coin value) {
-        SendRequest req = new SendRequest();
-        req.tx = new Transaction(params);
+        return to(new SendRequest(), params, destination, value);
+    }
+
+    public static SendRequest to(SendRequest req, ECKey destination, Coin value) {
+        return to(req, getNetworkParameters(req), destination, value);
+    }
+
+    public static SendRequest to(SendRequest req, NetworkParameters params, ECKey destination, Coin value) {
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
         req.tx.addOutput(value, destination);
         return req;
     }
@@ -208,8 +237,50 @@ public class SendRequest {
      */
     public static SendRequest createContract(NetworkParameters params, byte[] code, long gasLimit, long gasPrice) {
         SendRequest req = new SendRequest();
-        req.tx = new Transaction(params);
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
         Script script = ScriptBuilder.createOpCreateScript(code, gasLimit, gasPrice);
+        req.tx.addOutput(Coin.ZERO, script);
+        return req;
+    }
+
+    /**
+     * Creates a new SendRequest to create the given contract.
+     */
+    public static SendRequest createContract(NetworkParameters params, Address spender, byte[] code, long gasLimit, long gasPrice) {
+        return createContract(new SendRequest(), params, spender, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest createContract(SendRequest req, Address spender, byte[] code, long gasLimit, long gasPrice) {
+        return createContract(req, getNetworkParameters(req), spender, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest createContract(SendRequest req, NetworkParameters params, Address spender, byte[] code, long gasLimit, long gasPrice) {
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
+        Script script = ScriptBuilder.createOpCreateScript(code, spender.getHash(), gasLimit, gasPrice);
+        req.tx.addOutput(Coin.ZERO, script);
+        return req;
+    }
+
+    /**
+     * Creates a new SendRequest to create the given contract.
+     */
+    public static SendRequest createContract(NetworkParameters params, ECKey spender, byte[] code, long gasLimit, long gasPrice) {
+        return createContract(new SendRequest(), params, spender, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest createContract(SendRequest req, ECKey spender, byte[] code, long gasLimit, long gasPrice) {
+        return createContract(req, getNetworkParameters(req), spender, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest createContract(SendRequest req, NetworkParameters params, ECKey spender, byte[] code, long gasLimit, long gasPrice) {
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
+        Script script = ScriptBuilder.createOpCreateScript(code, spender, gasLimit, gasPrice);
         req.tx.addOutput(Coin.ZERO, script);
         return req;
     }
@@ -225,11 +296,64 @@ public class SendRequest {
      * Creates a new SendRequest to call the given contract with the given code.
      */
     public static SendRequest callContract(NetworkParameters params, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
-        SendRequest req = new SendRequest();
-        req.tx = new Transaction(params);
+        return callContract(new SendRequest(), params, address, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest callContract(SendRequest req, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        return callContract(req, getNetworkParameters(req), address, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest callContract(SendRequest req, NetworkParameters params, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
         Script script = ScriptBuilder.createOpCallScript(code, address, gasLimit, gasPrice);
         req.tx.addOutput(Coin.ZERO, script);
         return req;
+    }
+
+    /**
+     * Creates a new SendRequest to call the given contract with the given code.
+     */
+    public static SendRequest callContract(NetworkParameters params, Address spender, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        return callContract(new SendRequest(), params, spender, address, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest callContract(SendRequest req, Address spender, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        return callContract(req, getNetworkParameters(req), spender, address, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest callContract(SendRequest req, NetworkParameters params, Address spender, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
+        Script script = ScriptBuilder.createOpCallScript(code, spender.getHash(), address, gasLimit, gasPrice);
+        req.tx.addOutput(Coin.ZERO, script);
+        return req;
+    }
+
+    /**
+     * Creates a new SendRequest to call the given contract with the given code.
+     */
+    public static SendRequest callContract(NetworkParameters params, ECKey spender, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        return callContract(new SendRequest(), params, spender, address, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest callContract(SendRequest req, ECKey spender, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        return callContract(req, getNetworkParameters(req), spender, address, code, gasLimit, gasPrice);
+    }
+
+    public static SendRequest callContract(SendRequest req, NetworkParameters params, ECKey spender, ContractAddress address, byte[] code, long gasLimit, long gasPrice) {
+        if (req.tx == null) {
+            req.tx = new Transaction(params);
+        }
+        Script script = ScriptBuilder.createOpCallScript(code, spender, address, gasLimit, gasPrice);
+        req.tx.addOutput(Coin.ZERO, script);
+        return req;
+    }
+
+    public static NetworkParameters getNetworkParameters(SendRequest req) {
+        return req.tx.getOutputs().get(0).getParams();
     }
 
     /** Simply wraps a pre-built incomplete transaction provided by you. */

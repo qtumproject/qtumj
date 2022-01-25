@@ -253,15 +253,35 @@ public class ScriptPattern {
     public static Sha256Hash extractWitnessCommitmentHash(Script script) {
         return Sha256Hash.wrap(Arrays.copyOfRange(script.chunks.get(1).data, 4, 36));
     }
-    
-    /**
-     * Returns true if the given script is an OP_CREATE script.
-     */
-    public static boolean isOpCreate(Script script) {
-        // TODO: add support for OP_SENDER
+
+    public static boolean isOpSender(Script script) {
         List<ScriptChunk> chunks = script.chunks;
-        if (chunks.size() != 5)
+        // 1    // address type of the pubkeyhash (public key hash)
+        // Address               // sender's pubkeyhash address
+        // {signature, pubkey}   //serialized scriptSig
+        // OP_SENDER
+        // 4                     // EVM version
+        // 100000                //gas limit
+        // 10                    //gas price
+        // 1234                  // data to be sent by the contract
+        // OP_CREATE
+        boolean isOpCreate = chunks.size() == 9;
+
+        // 1                     // address type of the pubkeyhash (public key hash)
+        // Address               // sender's pubkeyhash address
+        // {signature, pubkey}   // serialized scriptSig
+        // OP_SENDER
+        // 4                     // EVM version
+        // 100000                // gas limit
+        // 10                    // gas price
+        // 1234                  // data to be sent by the contract
+        // Contract Address      // contract address
+        // OP_CALL
+        boolean isOpCall = chunks.size() == 10;
+
+        if (!isOpCall && !isOpCreate) {
             return false;
+        }
         if (!chunks.get(0).isPushData()) {
             return false;
         }
@@ -271,51 +291,86 @@ public class ScriptPattern {
         if (!chunks.get(2).isPushData()) {
             return false;
         }
-        ScriptChunk chunk3 = chunks.get(3);
+        if (!chunks.get(3).equalsOpCode(OP_SENDER)) {
+            return false;
+        }
+        if (isOpCreate && !chunks.get(8).equalsOpCode(OP_CREATE)) {
+            return false;
+        }
+        if (isOpCall && !chunks.get(9).equalsOpCode(OP_CALL)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean isOpSenderSigned(Script script) {
+        if (!isOpSender(script)) {
+            return false;
+        }
+        ScriptChunk signatureChunk = script.getChunks().get(2);
+        return signatureChunk.data != null && signatureChunk.data.length != 0;
+    }
+    
+    /**
+     * Returns true if the given script is an OP_CREATE script.
+     */
+    public static boolean isOpCreate(Script script) {
+        List<ScriptChunk> chunks = script.chunks;
+        boolean isOpSender = isOpSender(script);
+        if (chunks.size() != 5  && !isOpSender)
+            return false;
+
+        int opSenderOffset = isOpSender ? 4 : 0;
+        if (!chunks.get(opSenderOffset).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(1 + opSenderOffset).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(2 + opSenderOffset).isPushData()) {
+            return false;
+        }
+        ScriptChunk chunk3 = chunks.get(3 + opSenderOffset);
         if (!chunk3.isPushData()) {
             return false;
         }
         if (chunk3.data == null) {
             return false;
         }
-        if (!chunks.get(4).equalsOpCode(OP_CREATE)) {
-            return false;
-        }
-        return true;
+        return chunks.get(4 + opSenderOffset).equalsOpCode(OP_CREATE);
     }
 
     /**
      * Returns true if the given script is an OP_CALL script.
      */
     public static boolean isOpCall(Script script) {
-        // TODO: add support for OP_SENDER
         List<ScriptChunk> chunks = script.chunks;
-        if (chunks.size() != 6)
+        boolean isOpSender = chunks.size() == 10;
+        if (chunks.size() != 6 && !isOpSender)
             return false;
-        if (!chunks.get(0).isPushData()) {
-            return false;
-        }
-        if (!chunks.get(1).isPushData()) {
-            return false;
-        }
-        if (!chunks.get(2).isPushData()) {
+
+        int opSenderOffset = isOpSender ? 4 : 0;
+        if (!chunks.get(opSenderOffset).isPushData()) {
             return false;
         }
-        ScriptChunk chunk3 = chunks.get(3);
+        if (!chunks.get(1 + opSenderOffset).isPushData()) {
+            return false;
+        }
+        if (!chunks.get(2 + opSenderOffset).isPushData()) {
+            return false;
+        }
+        ScriptChunk chunk3 = chunks.get(3 + opSenderOffset);
         if (!chunk3.isPushData()) {
             return false;
         }
         if (chunk3.data == null) {
             return false;
         }
-        byte[] chunk4data = chunks.get(4).data;
+        byte[] chunk4data = chunks.get(4 + opSenderOffset).data;
         if (chunk4data == null || chunk4data.length != 20) {
             return false;
         }
-        if (!chunks.get(5).equalsOpCode(OP_CALL)) {
-            return false;
-        }
-        return true;
+        return chunks.get(5 + opSenderOffset).equalsOpCode(OP_CALL);
     }
     
     /**
@@ -332,7 +387,9 @@ public class ScriptPattern {
         if (!isContract(script)) {
             return 0;
         }
-        byte[] gasLimitBytes = script.chunks.get(1).data;
+        boolean isOpSender = isOpSender(script);
+        int offset = isOpSender ? 4 : 0;
+        byte[] gasLimitBytes = script.chunks.get(1 + offset).data;
         BigInteger gasLimit = Utils.decodeMPI(Utils.reverseBytes(gasLimitBytes), false);
         return gasLimit.longValueExact();
     }
@@ -344,7 +401,9 @@ public class ScriptPattern {
         if (!isContract(script)) {
             return 0;
         }
-        byte[] gasPriceBytes = script.chunks.get(2).data;
+        boolean isOpSender = isOpSender(script);
+        int offset = isOpSender ? 4 : 0;
+        byte[] gasPriceBytes = script.chunks.get(2 + offset).data;
         BigInteger gasPrice = Utils.decodeMPI(Utils.reverseBytes(gasPriceBytes), false);
         return gasPrice.longValueExact();
     }

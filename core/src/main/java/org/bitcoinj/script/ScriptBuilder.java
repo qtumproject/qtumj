@@ -554,6 +554,23 @@ public class ScriptBuilder {
         builder.op(OP_CREATE);
         return builder.build();
     }
+
+    /**
+     * Creates a script for OP_SENDER OP_CREATE opcode. This is for creating smart contracts on Qtum.
+     */
+    public static Script createOpCreateScript(byte[] byteCode, ECKey opSender, long gasLimit, long gasPrice) {
+        return createOpCreateScript(byteCode, opSender.getPubKeyHash(), gasLimit, gasPrice);
+    }
+
+    /**
+     * Creates a script for OP_SENDER OP_CREATE opcode. This is for creating smart contracts on Qtum.
+     */
+    public static Script createOpCreateScript(byte[] byteCode, byte[] opSenderPubKeyHash, long gasLimit, long gasPrice) {
+        return createOpSenderScript(
+                createOpCreateScript(byteCode, gasLimit, gasPrice),
+                opSenderPubKeyHash
+        );
+    }
     
     /**
      * Creates a script for the OP_CALL opcode. This is for creating transaction calling smart contracts on Qtum.
@@ -566,6 +583,47 @@ public class ScriptBuilder {
         builder.data(data);
         builder.data(address.getBytes());
         builder.op(OP_CALL);
+        return builder.build();
+    }
+
+    /**
+     * Creates a script for the OP_CALL opcode. This is for creating transaction calling smart contracts on Qtum.
+     */
+    public static Script createOpCallScript(byte[] data, ECKey opSender, ContractAddress address, long gasLimit, long gasPrice) {
+        return createOpCallScript(data, opSender.getPubKeyHash(), address, gasLimit, gasPrice);
+    }
+
+    public static Script createOpCallScript(byte[] data, byte[] opSenderPubKeyHash, ContractAddress address, long gasLimit, long gasPrice) {
+        return createOpSenderScript(
+                createOpCallScript(data, address, gasLimit, gasPrice),
+                opSenderPubKeyHash
+        );
+    }
+
+    private static Script createOpSenderScript(Script script, byte[] opSenderPubKeyHash) {
+        if (opSenderPubKeyHash == null) {
+            return script;
+        }
+        // TODO: simple validation that opSenderPubKeyHash is a pubkeyhash?
+        // 1                     // address type of the pubkeyhash (public key hash)
+        // Address               // sender's pubkeyhash address
+        // {signature, pubkey}   // serialized scriptSig
+        // OP_SENDER
+        // TODO: Adjust first value based on pubkey type if needed, though, qtumd only uses PUBKEYHASH
+        // PUBKEYHASH = 1,
+        // SCRIPTHASH = 2,
+        // WITNESSSCRIPTHASH = 3,
+        // WITNESSPUBKEYHASH = 4,
+        // NONSTANDARD = 5
+        ScriptBuilder builder = new ScriptBuilder();
+        builder.bigNum(1);
+        builder.data(opSenderPubKeyHash);
+        builder.data(new byte[0]);
+        builder.op(OP_SENDER);
+        for (ScriptChunk chunk : script.getChunks()) {
+            builder.addChunk(chunk);
+        }
+
         return builder.build();
     }
 }
