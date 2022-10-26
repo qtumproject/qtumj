@@ -35,14 +35,17 @@ import org.bitcoinj.wallet.WalletTransaction.Pool;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.math.IntMath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
 import java.io.*;
+import java.math.RoundingMode;
 import java.util.*;
 
+import static org.bitcoinj.core.NetworkParameters.ProtocolVersion.WITNESS_VERSION;
 import static org.bitcoinj.core.Utils.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -97,6 +100,12 @@ public class Transaction extends ChildMessage {
         }
     };
     private static final Logger log = LoggerFactory.getLogger(Transaction.class);
+
+    /**
+     * When this bit is set in protocolVersion, do not include witness. The actual value is the same as in Bitcoin Core
+     * for consistency.
+     */
+    public static final int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
     /** Threshold for lockTime: below this value it is interpreted as block number, otherwise as timestamp. **/
     public static final int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
@@ -287,6 +296,15 @@ public class Transaction extends ChildMessage {
     }
 
     /**
+     * Returns if tx witnesses are allowed based on the protocol version
+     */
+    private boolean allowWitness() {
+        int protocolVersion = serializer.getProtocolVersion();
+        return (protocolVersion & SERIALIZE_TRANSACTION_NO_WITNESS) == 0
+                && protocolVersion >= WITNESS_VERSION.getQtumProtocolVersion();
+    }
+
+    /**
      * Returns the witness transaction id (aka witness id) as per BIP144. For transactions without witness, this is the
      * same as {@link #getTxId()}.
      */
@@ -327,7 +345,7 @@ public class Transaction extends ChildMessage {
     public int getVsize() {
         if (!hasWitnesses())
             return getMessageSize();
-        return (getWeight() + 3) / 4; // round up
+        return IntMath.divide(getWeight(), 4, RoundingMode.CEILING); // round up
     }
 
     /**
@@ -585,30 +603,30 @@ public class Transaction extends ChildMessage {
         int cursor = offset + 4;
 
         int i;
-        long scriptLen;
+        int scriptLen;
 
         varint = new VarInt(buf, cursor);
-        long txInCount = varint.value;
+        int txInCount = varint.intValue();
         cursor += varint.getOriginalSizeInBytes();
 
         for (i = 0; i < txInCount; i++) {
             // 36 = length of previous_outpoint
             cursor += 36;
             varint = new VarInt(buf, cursor);
-            scriptLen = varint.value;
+            scriptLen = varint.intValue();
             // 4 = length of sequence field (unint32)
             cursor += scriptLen + 4 + varint.getOriginalSizeInBytes();
         }
 
         varint = new VarInt(buf, cursor);
-        long txOutCount = varint.value;
+        int txOutCount = varint.intValue();
         cursor += varint.getOriginalSizeInBytes();
 
         for (i = 0; i < txOutCount; i++) {
             // 8 = length of tx value field (uint64)
             cursor += 8;
             varint = new VarInt(buf, cursor);
-            scriptLen = varint.value;
+            scriptLen = varint.intValue();
             cursor += scriptLen + varint.getOriginalSizeInBytes();
         }
         // 4 = length of lock_time field (uint32)
@@ -622,26 +640,46 @@ public class Transaction extends ChildMessage {
      */
     @Override
     protected void parse() throws ProtocolException {
+        boolean allowWitness = allowWitness();
+
         cursor = offset;
         optimalEncodingMessageSize = 4;
 
         // version
         version = readUint32();
-        // peek at marker
-        byte marker = payload[cursor];
-        boolean useSegwit = marker == 0;
-        // marker, flag
-        if (useSegwit) {
-            readBytes(2);
-            optimalEncodingMessageSize += 2;
-        }
-        // txin_count, txins
+        byte flags = 0;
+        // Try to parse the inputs. In case the dummy is there, this will be read as an empty array list.
         parseInputs();
-        // txout_count, txouts
-        parseOutputs();
-        // script_witnesses
-        if (useSegwit)
+        if (inputs.size() == 0 && allowWitness) {
+            // We read a dummy or an empty input
+            flags = readByte();
+            optimalEncodingMessageSize += 2;
+
+            if (flags != 0) {
+                parseInputs();
+                parseOutputs();
+            } else {
+                outputs = new ArrayList<>(0);
+            }
+        } else {
+            // We read non-empty inputs. Assume normal outputs follows.
+            parseOutputs();
+        }
+
+        if (((flags & 1) != 0) && allowWitness) {
+            // The witness flag is present, and we support witnesses.
+            flags ^= 1;
+            // script_witnesses
             parseWitnesses();
+            if (!hasWitnesses()) {
+                // It's illegal to encode witnesses when all witness stacks are empty.
+                throw new ProtocolException("Superfluous witness record");
+            }
+        }
+        if (flags != 0) {
+            // Unknown flag in the serialization
+            throw new ProtocolException("Unknown transaction optional data");
+        }
         // lock_time
         lockTime = readUint32();
         optimalEncodingMessageSize += 4;
@@ -650,27 +688,31 @@ public class Transaction extends ChildMessage {
     }
 
     private void parseInputs() {
-        long numInputs = readVarInt();
-        optimalEncodingMessageSize += VarInt.sizeOf(numInputs);
+        VarInt numInputsVarInt = readVarInt();
+        optimalEncodingMessageSize += numInputsVarInt.getSizeInBytes();
+        int numInputs = numInputsVarInt.intValue();
         inputs = new ArrayList<>(Math.min((int) numInputs, Utils.MAX_INITIAL_ARRAY_LENGTH));
         for (long i = 0; i < numInputs; i++) {
             TransactionInput input = new TransactionInput(params, this, payload, cursor, serializer);
             inputs.add(input);
-            long scriptLen = readVarInt(TransactionOutPoint.MESSAGE_LENGTH);
-            optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + scriptLen + 4;
+            VarInt scriptLenVarInt = readVarInt(TransactionOutPoint.MESSAGE_LENGTH);
+            int scriptLen = scriptLenVarInt.intValue();
+            optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + scriptLenVarInt.getSizeInBytes() + scriptLen + 4;
             cursor += scriptLen + 4;
         }
     }
 
     private void parseOutputs() {
-        long numOutputs = readVarInt();
-        optimalEncodingMessageSize += VarInt.sizeOf(numOutputs);
+        VarInt numOutputsVarInt = readVarInt();
+        optimalEncodingMessageSize += numOutputsVarInt.getSizeInBytes();
+        int numOutputs = numOutputsVarInt.intValue();
         outputs = new ArrayList<>(Math.min((int) numOutputs, Utils.MAX_INITIAL_ARRAY_LENGTH));
         for (long i = 0; i < numOutputs; i++) {
             TransactionOutput output = new TransactionOutput(params, this, payload, cursor, serializer);
             outputs.add(output);
-            long scriptLen = readVarInt(8);
-            optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + scriptLen;
+            VarInt scriptLenVarInt = readVarInt(8);
+            int scriptLen = scriptLenVarInt.intValue();
+            optimalEncodingMessageSize += 8 + scriptLenVarInt.getSizeInBytes() + scriptLen;
             cursor += scriptLen;
         }
     }
@@ -678,14 +720,16 @@ public class Transaction extends ChildMessage {
     private void parseWitnesses() {
         int numWitnesses = inputs.size();
         for (int i = 0; i < numWitnesses; i++) {
-            long pushCount = readVarInt();
-            TransactionWitness witness = new TransactionWitness((int) pushCount);
+            VarInt pushCountVarInt = readVarInt();
+            int pushCount = pushCountVarInt.intValue();
+            optimalEncodingMessageSize += pushCountVarInt.getSizeInBytes();
+            TransactionWitness witness = new TransactionWitness(pushCount);
             getInput(i).setWitness(witness);
-            optimalEncodingMessageSize += VarInt.sizeOf(pushCount);
             for (int y = 0; y < pushCount; y++) {
-                long pushSize = readVarInt();
-                optimalEncodingMessageSize += VarInt.sizeOf(pushSize) + pushSize;
-                byte[] push = readBytes((int) pushSize);
+                VarInt pushSizeVarInt = readVarInt();
+                int pushSize = pushSizeVarInt.intValue();
+                optimalEncodingMessageSize += pushSizeVarInt.getSizeInBytes() + pushSize;
+                byte[] push = readBytes(pushSize);
                 witness.setPush(y, push);
             }
         }
@@ -810,20 +854,8 @@ public class Transaction extends ChildMessage {
         if (purpose != null)
             s.append(indent).append("purpose: ").append(purpose).append('\n');
         if (isCoinBase()) {
-            String script;
-            String script2;
-            try {
-                script = inputs.get(0).getScriptSig().toString();
-                script2 = outputs.get(0).getScriptPubKey().toString();
-            } catch (ScriptException e) {
-                script = "???";
-                script2 = "???";
-            }
-            s.append(indent).append("   == COINBASE TXN (scriptSig ").append(script).append(")  (scriptPubKey ").append(script2)
-                    .append(")\n");
-            return s.toString();
-        }
-        if (!inputs.isEmpty()) {
+            s.append(indent).append("coinbase\n");
+        } else if (!inputs.isEmpty()) {
             int i = 0;
             for (TransactionInput in : inputs) {
                 s.append(indent).append("   ");
@@ -895,8 +927,7 @@ public class Transaction extends ChildMessage {
                                 .append(spentBy.getIndex());
                     }
                 }
-                if (scriptType != null || !out.isAvailableForSpending())
-                    s.append('\n');
+                s.append('\n');
             } catch (Exception e) {
                 s.append("[exception: ").append(e.getMessage()).append("]\n");
             }
@@ -911,6 +942,14 @@ public class Transaction extends ChildMessage {
             s.append(fee.toFriendlyString()).append('\n');
         }
         return s.toString();
+    }
+
+    /**
+     * Serializes the transaction into the Bitcoin network format and encodes it as hex string.
+     * @return raw transaction in hex format
+     */
+    public String toHexString() {
+        return Utils.HEX.encode(unsafeBitcoinSerialize());
     }
 
     /**
@@ -984,8 +1023,7 @@ public class Transaction extends ChildMessage {
             input.setScriptSig(ScriptBuilder.createInputScript(signature, sigKey));
             input.setWitness(null);
         } else if (ScriptPattern.isP2WPKH(scriptPubKey)) {
-            Script scriptCode = new ScriptBuilder()
-                    .data(ScriptBuilder.createOutputScript(LegacyAddress.fromKey(params, sigKey)).getProgram()).build();
+            Script scriptCode = ScriptBuilder.createP2PKHOutputScript(sigKey);
             TransactionSignature signature = calculateWitnessSignature(inputIndex, sigKey, scriptCode, input.getValue(),
                     sigHash, anyoneCanPay);
             input.setScriptSig(ScriptBuilder.createEmpty());
@@ -1487,30 +1525,30 @@ public class Transaction extends ChildMessage {
 
             if (!anyoneCanPay) {
                 ByteArrayOutputStream bosHashPrevouts = new UnsafeByteArrayOutputStream(256);
-                for (int i = 0; i < this.inputs.size(); ++i) {
-                    bosHashPrevouts.write(this.inputs.get(i).getOutpoint().getHash().getReversedBytes());
-                    uint32ToByteStreamLE(this.inputs.get(i).getOutpoint().getIndex(), bosHashPrevouts);
+                for (TransactionInput input : this.inputs) {
+                    bosHashPrevouts.write(input.getOutpoint().getHash().getReversedBytes());
+                    uint32ToByteStreamLE(input.getOutpoint().getIndex(), bosHashPrevouts);
                 }
                 hashPrevouts = Sha256Hash.hashTwice(bosHashPrevouts.toByteArray());
             }
 
             if (!anyoneCanPay && signAll) {
                 ByteArrayOutputStream bosSequence = new UnsafeByteArrayOutputStream(256);
-                for (int i = 0; i < this.inputs.size(); ++i) {
-                    uint32ToByteStreamLE(this.inputs.get(i).getSequenceNumber(), bosSequence);
+                for (TransactionInput input : this.inputs) {
+                    uint32ToByteStreamLE(input.getSequenceNumber(), bosSequence);
                 }
                 hashSequence = Sha256Hash.hashTwice(bosSequence.toByteArray());
             }
 
             if (signAll) {
                 ByteArrayOutputStream bosHashOutputs = new UnsafeByteArrayOutputStream(256);
-                for (int i = 0; i < this.outputs.size(); ++i) {
+                for (TransactionOutput output : this.outputs) {
                     uint64ToByteStreamLE(
-                            BigInteger.valueOf(this.outputs.get(i).getValue().getValue()),
+                            BigInteger.valueOf(output.getValue().getValue()),
                             bosHashOutputs
                     );
-                    bosHashOutputs.write(new VarInt(this.outputs.get(i).getScriptBytes().length).encode());
-                    bosHashOutputs.write(this.outputs.get(i).getScriptBytes());
+                    bosHashOutputs.write(new VarInt(output.getScriptBytes().length).encode());
+                    bosHashOutputs.write(output.getScriptBytes());
                 }
                 hashOutputs = Sha256Hash.hashTwice(bosHashOutputs.toByteArray());
             } else if (basicSigHashType == SigHash.SINGLE.value && inputIndex < outputs.size()) {
@@ -1528,6 +1566,7 @@ public class Transaction extends ChildMessage {
             bos.write(hashSequence);
             bos.write(inputs.get(inputIndex).getOutpoint().getHash().getReversedBytes());
             uint32ToByteStreamLE(inputs.get(inputIndex).getOutpoint().getIndex(), bos);
+            bos.write(new VarInt(scriptCode.length).encode());
             bos.write(scriptCode);
             uint64ToByteStreamLE(BigInteger.valueOf(prevValue.getValue()), bos);
             uint32ToByteStreamLE(inputs.get(inputIndex).getSequenceNumber(), bos);
@@ -1687,8 +1726,7 @@ public class Transaction extends ChildMessage {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
-        boolean useSegwit = hasWitnesses()
-                && protocolVersion >= NetworkParameters.ProtocolVersion.WITNESS_VERSION.getQtumProtocolVersion();
+        boolean useSegwit = hasWitnesses() && allowWitness();
         bitcoinSerializeToStream(stream, useSegwit);
     }
 

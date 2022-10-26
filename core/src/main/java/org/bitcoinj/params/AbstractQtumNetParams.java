@@ -17,7 +17,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractQtumNetParams extends NetworkParameters {
+public abstract class AbstractQtumNetParams extends AbstractBitcoinNetParams {
 
     public static final String QTUM_SCHEME = "qtum";
     public static final int REWARD_HALVING_INTERVAL = 985500;
@@ -52,7 +52,7 @@ public abstract class AbstractQtumNetParams extends NetworkParameters {
      * @param height The height of the previous stored block
      * @return If this is a reward halving point
      */
-    public final boolean isRewardHalvingPoint(final int height) {
+    public boolean isRewardHalvingPoint(final int height) {
         return ((height + 1) % REWARD_HALVING_INTERVAL) == 0;
     }
 

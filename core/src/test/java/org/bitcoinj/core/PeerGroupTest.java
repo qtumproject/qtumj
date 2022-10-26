@@ -141,14 +141,14 @@ public class PeerGroupTest extends TestWithPeerGroup {
         final AtomicBoolean result = new AtomicBoolean();
         peerGroup.addPeerDiscovery(new PeerDiscovery() {
             @Override
-            public InetSocketAddress[] getPeers(long services, long unused, TimeUnit unused2) throws PeerDiscoveryException {
+            public List<InetSocketAddress> getPeers(long services, long unused, TimeUnit unused2) throws PeerDiscoveryException {
                 if (!result.getAndSet(true)) {
                     // Pretend we are not connected to the internet.
                     throw new PeerDiscoveryException("test failure");
                 } else {
                     // Return a bogus address.
                     latch.countDown();
-                    return new InetSocketAddress[]{new InetSocketAddress("localhost", 1)};
+                    return Arrays.asList(new InetSocketAddress("localhost", 1));
                 }
             }
 
@@ -165,13 +165,13 @@ public class PeerGroupTest extends TestWithPeerGroup {
 
     // Utility method to create a PeerDiscovery with a certain number of addresses.
     private PeerDiscovery createPeerDiscovery(int nrOfAddressesWanted, int port) {
-        final InetSocketAddress[] addresses = new InetSocketAddress[nrOfAddressesWanted];
+        final List<InetSocketAddress> addresses = new ArrayList<>(nrOfAddressesWanted);
         for (int addressNr = 0; addressNr < nrOfAddressesWanted; addressNr++) {
             // make each address unique by using the counter to increment the port.
-            addresses[addressNr] = new InetSocketAddress("localhost", port + addressNr);
+            addresses.add(new InetSocketAddress("localhost", port + addressNr));
         }
         return new PeerDiscovery() {
-            public InetSocketAddress[] getPeers(long services, long unused, TimeUnit unused2) throws PeerDiscoveryException {
+            public List<InetSocketAddress> getPeers(long services, long unused, TimeUnit unused2) throws PeerDiscoveryException {
                 return addresses;
             }
             public void shutdown() {
@@ -326,8 +326,8 @@ public class PeerGroupTest extends TestWithPeerGroup {
         Block b3 = FakeTxBuilder.makeSolvedTestBlock(b2);
 
         // Expect a zero hash getblocks on p1. This is how the process starts.
-        peerGroup.startBlockChainDownload(new AbstractPeerDataEventListener() {
-        });
+        peerGroup.startBlockChainDownload(new AbstractPeerDataEventListener() {});
+        peerGroup.startBlockChainDownloadFromPeer(peerGroup.getConnectedPeers().iterator().next());
         GetBlocksMessage getblocks = (GetBlocksMessage) outbound(p1);
         assertEquals(Sha256Hash.ZERO_HASH, getblocks.getStopHash());
         // We give back an inv with some blocks in it.
@@ -469,11 +469,11 @@ public class PeerGroupTest extends TestWithPeerGroup {
     public void downloadPeerSelection() throws Exception {
         peerGroup.start();
         VersionMessage v1 = new VersionMessage(UNITTEST, 2);
-        v1.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getQtumProtocolVersion();
-        v1.localServices = VersionMessage.NODE_NETWORK;
+        v1.clientVersion = NetworkParameters.ProtocolVersion.WITNESS_VERSION.getQtumProtocolVersion();
+        v1.localServices = VersionMessage.NODE_NETWORK | VersionMessage.NODE_BLOOM | VersionMessage.NODE_WITNESS;
         VersionMessage v2 = new VersionMessage(UNITTEST, 4);
-        v2.clientVersion = NetworkParameters.ProtocolVersion.BLOOM_FILTER.getQtumProtocolVersion();
-        v2.localServices = VersionMessage.NODE_NETWORK;
+        v2.clientVersion = NetworkParameters.ProtocolVersion.WITNESS_VERSION.getQtumProtocolVersion();
+        v2.localServices = VersionMessage.NODE_NETWORK | VersionMessage.NODE_BLOOM | VersionMessage.NODE_WITNESS;
         assertNull(peerGroup.getDownloadPeer());
 
         Peer p1 = connectPeer(0, v1).peer;
@@ -557,8 +557,8 @@ public class PeerGroupTest extends TestWithPeerGroup {
         peerGroup.addPreMessageReceivedEventListener(preMessageReceivedListener);
         peerGroup.addPeerDiscovery(new PeerDiscovery() {
             @Override
-            public InetSocketAddress[] getPeers(long services, long unused, TimeUnit unused2) throws PeerDiscoveryException {
-                return addresses.toArray(new InetSocketAddress[addresses.size()]);
+            public List<InetSocketAddress> getPeers(long services, long unused, TimeUnit unused2) throws PeerDiscoveryException {
+                return addresses;
             }
 
             @Override
@@ -567,7 +567,6 @@ public class PeerGroupTest extends TestWithPeerGroup {
         });
         peerGroup.setMaxConnections(3);
 
-        Utils.setMockSleep(true);
         blockJobs = true;
 
         jobBlocks.release(2);   // startup + first peer discovery
@@ -618,7 +617,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
 
     @Test
     public void testBloomOnP2PK() throws Exception {
-        // Cover bug 513. When a relevant transaction with a P2PK output is found, the Bloom filter should be
+        // Cover GitHub bug #879. When a relevant transaction with a P2PK output is found, the Bloom filter should be
         // recalculated to include that transaction hash but not re-broadcast as the remote nodes should have followed
         // the same procedure. However a new node that's connected should get the fresh filter.
         peerGroup.start();
@@ -804,6 +803,7 @@ public class PeerGroupTest extends TestWithPeerGroup {
         assertTrue(p1.lastReceivedFilter.contains(keys.get(5).getPubKeyHash()));
         assertFalse(p1.lastReceivedFilter.contains(keys.get(keys.size() - 1).getPubKey()));
         peerGroup.startBlockChainDownload(null);
+        peerGroup.startBlockChainDownloadFromPeer(peerGroup.getConnectedPeers().iterator().next());
         assertNextMessageIs(p1, GetBlocksMessage.class);
 
         // Make some transactions and blocks that send money to the wallet thus using up all the keys.

@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 
 import com.google.common.annotations.*;
 import com.google.common.collect.*;
+import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.*;
 import net.jcip.annotations.*;
@@ -75,6 +76,7 @@ import org.bouncycastle.crypto.params.*;
 import javax.annotation.*;
 import java.io.*;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
@@ -160,7 +162,7 @@ public class Wallet extends BaseTaggableObject
 
     // All the TransactionOutput objects that we could spend (ignoring whether we have the private key or not).
     // Used to speed up various calculations.
-    protected final HashSet<TransactionOutput> myUnspents = Sets.newHashSet();
+    protected final HashSet<TransactionOutput> myUnspents = new HashSet<>();
 
     // Transactions that were dropped by the risk analysis system. These are not in any pools and not serialized
     // to disk. We have to keep them around because if we ignore a tx because we think it will never confirm, but
@@ -460,7 +462,7 @@ public class Wallet extends BaseTaggableObject
         this.context = checkNotNull(context);
         this.params = checkNotNull(context.getParams());
         this.keyChainGroup = checkNotNull(keyChainGroup);
-        watchedScripts = Sets.newHashSet();
+        watchedScripts = new HashSet<>();
         unspent = new HashMap<>();
         spent = new HashMap<>();
         pending = new HashMap<>();
@@ -1162,7 +1164,7 @@ public class Wallet extends BaseTaggableObject
             return isPubKeyHashMine(address.getHash(), scriptType);
         else if (scriptType == ScriptType.P2SH)
             return isPayToScriptHashMine(address.getHash());
-        else if (scriptType == ScriptType.P2WSH)
+        else if (scriptType == ScriptType.P2WSH || scriptType == ScriptType.P2TR)
             return false;
         else
             throw new IllegalArgumentException(address.toString());
@@ -1267,7 +1269,7 @@ public class Wallet extends BaseTaggableObject
                     }
                 } catch (ScriptException e) {
                     // Just means we didn't understand the output of this transaction: ignore it.
-                    log.warn("Could not parse tx output script: {}", e.toString());
+                    log.info("Could not parse tx output script: {}", e.toString());
                 }
             }
         } finally {
@@ -1349,9 +1351,7 @@ public class Wallet extends BaseTaggableObject
             final KeyCrypter crypter = keyChainGroup.getKeyCrypter();
             checkState(crypter != null, "Not encrypted");
             keyChainGroup.decrypt(crypter.deriveKey(password));
-        } catch (KeyCrypterException.InvalidCipherText e) {
-            throw new BadWalletEncryptionKeyException(e);
-        } catch (KeyCrypterException.PublicPrivateMismatch e) {
+        } catch (KeyCrypterException.InvalidCipherText | KeyCrypterException.PublicPrivateMismatch e) {
             throw new BadWalletEncryptionKeyException(e);
         } finally {
             keyChainGroupLock.unlock();
@@ -1370,9 +1370,7 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             keyChainGroup.decrypt(aesKey);
-        } catch (KeyCrypterException.InvalidCipherText e) {
-            throw new BadWalletEncryptionKeyException(e);
-        } catch (KeyCrypterException.PublicPrivateMismatch e) {
+        } catch (KeyCrypterException.InvalidCipherText | KeyCrypterException.PublicPrivateMismatch e) {
             throw new BadWalletEncryptionKeyException(e);
         } finally {
             keyChainGroupLock.unlock();
@@ -1711,12 +1709,8 @@ public class Wallet extends BaseTaggableObject
      */
     public static Wallet loadFromFile(File file, @Nullable WalletExtension... walletExtensions) throws UnreadableWalletException {
         try {
-            FileInputStream stream = null;
-            try {
-                stream = new FileInputStream(file);
+            try (FileInputStream stream = new FileInputStream(file)) {
                 return loadFromFileStream(stream, walletExtensions);
-            } finally {
-                if (stream != null) stream.close();
             }
         } catch (IOException e) {
             throw new UnreadableWalletException("Could not open file", e);
@@ -1896,7 +1890,14 @@ public class Wallet extends BaseTaggableObject
                 return;
             if (isTransactionRisky(tx, dependencies) && !acceptRiskyTransactions) {
                 // isTransactionRisky already logged the reason.
-                riskDropped.put(tx.getTxId(), tx);
+
+                // Clone transaction to avoid multiple wallets pointing to the same transaction. This can happen when
+                // two wallets depend on the same transaction.
+                Transaction cloneTx = tx.getParams().getDefaultSerializer().makeTransaction(tx.bitcoinSerialize());
+                cloneTx.setPurpose(tx.getPurpose());
+                cloneTx.setUpdateTime(tx.getUpdateTime());
+
+                riskDropped.put(cloneTx.getTxId(), cloneTx);
                 log.warn("There are now {} risk dropped transactions being kept in memory", riskDropped.size());
                 return;
             }
@@ -1908,10 +1909,17 @@ public class Wallet extends BaseTaggableObject
             if (tx.getConfidence().getSource().equals(TransactionConfidence.Source.UNKNOWN)) {
                 log.warn("Wallet received transaction with an unknown source. Consider tagging it!");
             }
+
+            // Clone transaction to avoid multiple wallets pointing to the same transaction. This can happen when
+            // two wallets depend on the same transaction.
+            Transaction cloneTx = tx.getParams().getDefaultSerializer().makeTransaction(tx.bitcoinSerialize());
+            cloneTx.setPurpose(tx.getPurpose());
+            cloneTx.setUpdateTime(tx.getUpdateTime());
+
             // If this tx spends any of our unspent outputs, mark them as spent now, then add to the pending pool. This
             // ensures that if some other client that has our keys broadcasts a spend we stay in sync. Also updates the
             // timestamp on the transaction and registers/runs event listeners.
-            commitTx(tx);
+            commitTx(cloneTx);
         } finally {
             lock.unlock();
         }
@@ -2014,14 +2022,14 @@ public class Wallet extends BaseTaggableObject
      */
     private Set<Transaction> findDoubleSpendsAgainst(Transaction tx, Map<Sha256Hash, Transaction> candidates) {
         checkState(lock.isHeldByCurrentThread());
-        if (tx.isCoinBase()) return Sets.newHashSet();
+        if (tx.isCoinBase()) return new HashSet<>();
         // Compile a set of outpoints that are spent by tx.
         HashSet<TransactionOutPoint> outpoints = new HashSet<>();
         for (TransactionInput input : tx.getInputs()) {
             outpoints.add(input.getOutpoint());
         }
         // Now for each pending transaction, see if it shares any outpoints with this tx.
-        Set<Transaction> doubleSpendTxns = Sets.newHashSet();
+        Set<Transaction> doubleSpendTxns = new HashSet<>();
         for (Transaction p : candidates.values()) {
             if (p.equals(tx))
                 continue;
@@ -2184,7 +2192,8 @@ public class Wallet extends BaseTaggableObject
                 // When a tx is received from the best chain, if other txns that spend this tx are IN_CONFLICT,
                 // change its confidence to PENDING (Unless they are also spending other txns IN_CONFLICT).
                 // Consider dependency chains.
-                Set<Transaction> currentTxDependencies = Sets.newHashSet(tx);
+                Set<Transaction> currentTxDependencies = new HashSet<>();
+                currentTxDependencies.add(tx);
                 addTransactionsDependingOn(currentTxDependencies, getTransactions(true));
                 currentTxDependencies.remove(tx);
                 List<Transaction> currentTxDependenciesSorted = sortTxnsByDependency(currentTxDependencies);
@@ -2483,9 +2492,9 @@ public class Wallet extends BaseTaggableObject
                     // so the exact nature of the mutation can be examined.
                     log.warn("Saw two pending transactions double spend each other");
                     log.warn("  offending input is input {}", tx.getInputs().indexOf(input));
-                    log.warn("{}: {}", tx.getTxId(), Utils.HEX.encode(tx.unsafeBitcoinSerialize()));
+                    log.warn("{}: {}", tx.getTxId(), tx.toHexString());
                     Transaction other = output.getSpentBy().getParentTransaction();
-                    log.warn("{}: {}", other.getTxId(), Utils.HEX.encode(other.unsafeBitcoinSerialize()));
+                    log.warn("{}: {}", other.getTxId(), other.toHexString());
                 }
             } else if (result == TransactionInput.ConnectionResult.SUCCESS) {
                 // Otherwise we saw a transaction spend our coins, but we didn't try and spend them ourselves yet.
@@ -3907,11 +3916,17 @@ public class Wallet extends BaseTaggableObject
     /** A SendResult is returned to you as part of sending coins to a recipient. */
     public static class SendResult {
         /** The Bitcoin transaction message that moves the money. */
-        public Transaction tx;
+        public final Transaction tx;
         /** A future that will complete once the tx message has been successfully broadcast to the network. This is just the result of calling broadcast.future() */
-        public ListenableFuture<Transaction> broadcastComplete;
+        public final ListenableFuture<Transaction> broadcastComplete;
         /** The broadcast object returned by the linked TransactionBroadcaster */
-        public TransactionBroadcast broadcast;
+        public final TransactionBroadcast broadcast;
+
+        public SendResult(Transaction tx, TransactionBroadcast broadcast) {
+            this.tx = tx;
+            this.broadcast = broadcast;
+            this.broadcastComplete = broadcast.future();
+        }
     }
 
     /**
@@ -4104,15 +4119,12 @@ public class Wallet extends BaseTaggableObject
         // Commit the TX to the wallet immediately so the spent coins won't be reused.
         // TODO: We should probably allow the request to specify tx commit only after the network has accepted it.
         Transaction tx = sendCoinsOffline(request);
-        SendResult result = new SendResult();
-        result.tx = tx;
+        SendResult result = new SendResult(tx, broadcaster.broadcastTransaction(tx));
         // The tx has been committed to the pending pool by this point (via sendCoinsOffline -> commitTx), so it has
         // a txConfidenceListener registered. Once the tx is broadcast the peers will update the memory pool with the
         // count of seen peers, the memory pool will update the transaction confidence object, that will invoke the
         // txConfidenceListener which will in turn invoke the wallets event listener onTransactionConfidenceChanged
         // method.
-        result.broadcast = broadcaster.broadcastTransaction(tx);
-        result.broadcastComplete = result.broadcast.future();
         return result;
     }
 
@@ -4381,22 +4393,23 @@ public class Wallet extends BaseTaggableObject
 
             // resolve missing sigs if any
             new MissingSigResolutionSigner(req.missingSigsMode).signInputs(proposal, maybeDecryptingKeyBag);
-        } catch (KeyCrypterException.InvalidCipherText e) {
-            throw new BadWalletEncryptionKeyException(e);
-        } catch (KeyCrypterException.PublicPrivateMismatch e) {
+        } catch (KeyCrypterException.InvalidCipherText | KeyCrypterException.PublicPrivateMismatch e) {
             throw new BadWalletEncryptionKeyException(e);
         } finally {
             lock.unlock();
         }
     }
 
-    /** Reduce the value of the first output of a transaction to pay the given feePerKb as appropriate for its size. */
+    /**
+     * Reduce the value of the first output of a transaction to pay the given feePerKb as appropriate for its size.
+     * If ensureMinRequiredFee is true, feePerKb is set to at least {@link Transaction#REFERENCE_DEFAULT_MIN_TX_FEE}.
+     */
     private boolean adjustOutputDownwardsForFee(Transaction tx, CoinSelection coinSelection, Coin feePerKb,
             boolean ensureMinRequiredFee) {
+        if (ensureMinRequiredFee && feePerKb.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
+            feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
         final int vsize = tx.getVsize() + estimateVirtualBytesForSigning(coinSelection);
         Coin fee = feePerKb.multiply(vsize).divide(1000);
-        if (ensureMinRequiredFee && fee.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
-            fee = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
         TransactionOutput output = tx.getOutput(0);
         output.setValue(output.getValue().subtract(fee));
         return !output.isDust();
@@ -4926,7 +4939,7 @@ public class Wallet extends BaseTaggableObject
         Script script = out.getScriptPubKey();
         boolean isScriptTypeSupported = ScriptPattern.isP2PK(script) || ScriptPattern.isP2SH(script)
                 || ScriptPattern.isP2WPKH(script) || ScriptPattern.isP2WSH(script);
-        return (isScriptTypeSupported && myUnspents.contains(out)) || watchedScripts.contains(script);
+        return (isScriptTypeSupported && out.isMine(this)) || watchedScripts.contains(script);
     }
 
     /**
@@ -5196,7 +5209,8 @@ public class Wallet extends BaseTaggableObject
                 } else if (ScriptPattern.isP2WPKH(script)) {
                     key = findKeyFromPubKeyHash(ScriptPattern.extractHashFromP2WH(script), Script.ScriptType.P2WPKH);
                     checkNotNull(key, "Coin selection includes unspendable outputs");
-                    vsize += (script.getNumberOfBytesRequiredToSpend(key, redeemScript) + 3) / 4; // round up
+                    vsize += IntMath.divide(script.getNumberOfBytesRequiredToSpend(key, redeemScript), 4,
+                            RoundingMode.CEILING); // round up
                 } else if (ScriptPattern.isP2SH(script)) {
                     redeemScript = findRedeemDataFromScriptHash(ScriptPattern.extractHashFromP2SH(script)).redeemScript;
                     checkNotNull(redeemScript, "Coin selection includes unspendable outputs");

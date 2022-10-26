@@ -17,9 +17,6 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.params.*;
 import org.bitcoinj.script.*;
@@ -29,7 +26,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.MonetaryFormat;
 
 import javax.annotation.*;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
 import java.math.*;
 import java.util.*;
 
@@ -279,9 +276,7 @@ public abstract class NetworkParameters {
      * and a message in the coinbase transaction. It says, <i>"The Times 03/Jan/2009 Chancellor on brink of second
      * bailout for banks"</i>.</p>
      */
-    public Block getGenesisBlock() {
-        return genesisBlock;
-    }
+    public abstract Block getGenesisBlock();
 
     /** Default TCP port on which to connect to nodes. */
     public int getPort() {
@@ -348,14 +343,6 @@ public abstract class NetworkParameters {
     /** Maximum target represents the easiest allowable proof of work. */
     public BigInteger getMaxTarget() {
         return maxTarget;
-    }
-
-    /**
-     * The key used to sign {@link AlertMessage}s. You can use {@link ECKey#verify(byte[], byte[], byte[])} to verify
-     * signatures using it.
-     */
-    public byte[] getAlertSigningKey() {
-        return alertSigningKey;
     }
 
     /** Returns the 4 byte header for BIP32 wallet P2PKH - public key part. */
@@ -514,7 +501,8 @@ public abstract class NetworkParameters {
         BLOOM_FILTER(70000), // BIP37
         BLOOM_FILTER_BIP111(70011), // BIP111
         WITNESS_VERSION(70012),
-        CURRENT(70019);
+        FEEFILTER(70013), // BIP133
+        CURRENT(70020);
 
         private final int qtumProtocol;
 

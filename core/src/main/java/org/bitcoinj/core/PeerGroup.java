@@ -32,6 +32,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bitcoinj.wallet.listeners.ScriptsChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.slf4j.*;
 
 import javax.annotation.*;
@@ -100,6 +101,7 @@ public class PeerGroup implements TransactionBroadcaster {
     // Addresses to try to connect to, excluding active peers.
     @GuardedBy("lock") private final PriorityQueue<PeerAddress> inactives;
     @GuardedBy("lock") private final Map<PeerAddress, ExponentialBackoff> backoffMap;
+    @GuardedBy("lock") private final Map<PeerAddress, Integer> priorityMap;
 
     // Currently active peers. This is an ordered list rather than a set to make unit tests predictable.
     private final CopyOnWriteArrayList<Peer> peers;
@@ -174,42 +176,53 @@ public class PeerGroup implements TransactionBroadcaster {
     private final WalletCoinsReceivedEventListener walletCoinsReceivedEventListener = new WalletCoinsReceivedEventListener() {
         @Override
         public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
-            // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
-            // if we have received a transaction that includes a relevant P2PK or P2WPKH output.
-            //
-            // The reason is that P2PK and P2WPKH outputs, when spent, will not repeat any data we can predict in their
-            // inputs. So a remote peer will update the Bloom filter for us when such an output is seen matching the
-            // existing filter, so that it includes the tx hash in which the P2PK/P2WPKH output was observed. Thus
-            // the spending transaction will always match (due to the outpoint structure).
-            //
-            // Unfortunately, whilst this is required for correct sync of the chain in blocks, there are two edge cases.
-            //
-            // (1) If a wallet receives a relevant, confirmed P2PK/P2WPKH output that was not broadcast across the network,
-            // for example in a coinbase transaction, then the node that's serving us the chain will update its filter
-            // but the rest will not. If another transaction then spends it, the other nodes won't match/relay it.
-            //
-            // (2) If we receive a P2PK/P2WPKH output broadcast across the network, all currently connected nodes will see
-            // it and update their filter themselves, but any newly connected nodes will receive the last filter we
-            // calculated, which would not include this transaction.
-            //
-            // For this reason we check if the transaction contained any relevant P2PKs or P2WPKHs and force a recalc
-            // and possibly retransmit if so. The recalculation process will end up including the tx hash into the
-            // filter. In case (1), we need to retransmit the filter to the connected peers. In case (2), we don't
-            // and shouldn't, we should just recalculate and cache the new filter for next time.
-            for (TransactionOutput output : tx.getOutputs()) {
-                Script scriptPubKey = output.getScriptPubKey();
-                if (ScriptPattern.isP2PK(scriptPubKey) || ScriptPattern.isP2WPKH(scriptPubKey)) {
-                    if (output.isMine(wallet)) {
-                        if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
-                            recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
-                        else
-                            recalculateFastCatchupAndFilter(FilterRecalculateMode.DONT_SEND);
-                        return;
-                    }
+            onCoinsReceivedOrSent(wallet, tx);
+        }
+    };
+
+    private final WalletCoinsSentEventListener walletCoinsSentEventListener = new WalletCoinsSentEventListener() {
+        @Override
+        public void onCoinsSent(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+            onCoinsReceivedOrSent(wallet, tx);
+        }
+    };
+
+    private void onCoinsReceivedOrSent(Wallet wallet, Transaction tx) {
+        // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
+        // if we have received a transaction that includes a relevant P2PK or P2WPKH output.
+        //
+        // The reason is that P2PK and P2WPKH outputs, when spent, will not repeat any data we can predict in their
+        // inputs. So a remote peer will update the Bloom filter for us when such an output is seen matching the
+        // existing filter, so that it includes the tx hash in which the P2PK/P2WPKH output was observed. Thus
+        // the spending transaction will always match (due to the outpoint structure).
+        //
+        // Unfortunately, whilst this is required for correct sync of the chain in blocks, there are two edge cases.
+        //
+        // (1) If a wallet receives a relevant, confirmed P2PK/P2WPKH output that was not broadcast across the network,
+        // for example in a coinbase transaction, then the node that's serving us the chain will update its filter
+        // but the rest will not. If another transaction then spends it, the other nodes won't match/relay it.
+        //
+        // (2) If we receive a P2PK/P2WPKH output broadcast across the network, all currently connected nodes will see
+        // it and update their filter themselves, but any newly connected nodes will receive the last filter we
+        // calculated, which would not include this transaction.
+        //
+        // For this reason we check if the transaction contained any relevant P2PKs or P2WPKHs and force a recalc
+        // and possibly retransmit if so. The recalculation process will end up including the tx hash into the
+        // filter. In case (1), we need to retransmit the filter to the connected peers. In case (2), we don't
+        // and shouldn't, we should just recalculate and cache the new filter for next time.
+        for (TransactionOutput output : tx.getOutputs()) {
+            Script scriptPubKey = output.getScriptPubKey();
+            if (ScriptPattern.isP2PK(scriptPubKey) || ScriptPattern.isP2WPKH(scriptPubKey)) {
+                if (output.isMine(wallet)) {
+                    if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
+                        recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
+                    else
+                        recalculateFastCatchupAndFilter(FilterRecalculateMode.DONT_SEND);
+                    return;
                 }
             }
         }
-    };
+    }
 
     // Exponential backoff for peers starts at 1 second and maxes at 10 minutes.
     private final ExponentialBackoff.Params peerBackoffParams = new ExponentialBackoff.Params(1000, 1.5f, 10 * 60 * 1000);
@@ -345,13 +358,18 @@ public class PeerGroup implements TransactionBroadcaster {
             public int compare(PeerAddress a, PeerAddress b) {
                 checkState(lock.isHeldByCurrentThread());
                 int result = backoffMap.get(a).compareTo(backoffMap.get(b));
+                if (result != 0)
+                    return result;
+                result = Integer.compare(getPriority(a), getPriority(b));
+                if (result != 0)
+                    return result;
                 // Sort by port if otherwise equals - for testing
-                if (result == 0)
-                    result = Integer.compare(a.getPort(), b.getPort());
+                result = Integer.compare(a.getPort(), b.getPort());
                 return result;
             }
         });
         backoffMap = new HashMap<>();
+        priorityMap = new ConcurrentHashMap<>();
         peers = new CopyOnWriteArrayList<>();
         pendingPeers = new CopyOnWriteArrayList<>();
         channels = connectionManager;
@@ -857,10 +875,21 @@ public class PeerGroup implements TransactionBroadcaster {
      * @param peerAddress IP/port to use.
      */
     public void addAddress(PeerAddress peerAddress) {
+        addAddress(peerAddress, 0);
+    }
+
+    /**
+     * Add an address to the list of potential peers to connect to. It won't necessarily be used unless there's a need
+     * to build new connections to reach the max connection count.
+     *
+     * @param peerAddress IP/port to use.
+     * @param priority for connecting and being picked as a download peer
+     */
+    public void addAddress(PeerAddress peerAddress, int priority) {
         int newMax;
         lock.lock();
         try {
-            if (addInactive(peerAddress)) {
+            if (addInactive(peerAddress, priority)) {
                 newMax = getMaxConnections() + 1;
                 setMaxConnections(newMax);
             }
@@ -871,18 +900,25 @@ public class PeerGroup implements TransactionBroadcaster {
 
     // Adds peerAddress to backoffMap map and inactives queue.
     // Returns true if it was added, false if it was already there.
-    private boolean addInactive(PeerAddress peerAddress) {
+    private boolean addInactive(PeerAddress peerAddress, int priority) {
         lock.lock();
         try {
             // Deduplicate
             if (backoffMap.containsKey(peerAddress))
                 return false;
             backoffMap.put(peerAddress, new ExponentialBackoff(peerBackoffParams));
+            if (priority != 0)
+                priorityMap.put(peerAddress, priority);
             inactives.offer(peerAddress);
             return true;
         } finally {
             lock.unlock();
         }
+    }
+
+    private int getPriority(PeerAddress peerAddress) {
+        Integer priority = priorityMap.get(peerAddress);
+        return priority != null ? priority : 0;
     }
 
     /**
@@ -901,9 +937,14 @@ public class PeerGroup implements TransactionBroadcaster {
         }
     }
 
-    /** Convenience method for addAddress(new PeerAddress(address, params.port)); */
+    /** Convenience method for {@link #addAddress(PeerAddress)}. */
     public void addAddress(InetAddress address) {
         addAddress(new PeerAddress(params, address, params.getPort()));
+    }
+
+    /** Convenience method for {@link #addAddress(PeerAddress, int)}. */
+    public void addAddress(InetAddress address, int priority) {
+        addAddress(new PeerAddress(params, address, params.getPort()), priority);
     }
 
     /**
@@ -930,7 +971,7 @@ public class PeerGroup implements TransactionBroadcaster {
         final Stopwatch watch = Stopwatch.createStarted();
         final List<PeerAddress> addressList = new LinkedList<>();
         for (PeerDiscovery peerDiscovery : peerDiscoverers /* COW */) {
-            InetSocketAddress[] addresses;
+            List<InetSocketAddress> addresses;
             try {
                 addresses = peerDiscovery.getPeers(requiredServices, peerDiscoveryTimeoutMillis, TimeUnit.MILLISECONDS);
             } catch (PeerDiscoveryException e) {
@@ -942,7 +983,7 @@ public class PeerGroup implements TransactionBroadcaster {
         }
         if (!addressList.isEmpty()) {
             for (PeerAddress address : addressList) {
-                addInactive(address);
+                addInactive(address, 0);
             }
             final ImmutableSet<PeerAddress> peersDiscoveredSet = ImmutableSet.copyOf(addressList);
             for (final ListenerRegistration<PeerDiscoveredEventListener> registration : peerDiscoveredEventListeners /* COW */) {
@@ -955,7 +996,8 @@ public class PeerGroup implements TransactionBroadcaster {
             }
         }
         watch.stop();
-        log.info("Peer discovery took {} and returned {} items", watch, addressList.size());
+        log.info("Peer discovery took {} and returned {} items from {} discoverers", watch, addressList.size(),
+                peerDiscoverers.size());
         return addressList.size();
     }
 
@@ -985,23 +1027,14 @@ public class PeerGroup implements TransactionBroadcaster {
         checkState(lock.isHeldByCurrentThread());
         if (localhostCheckState == LocalhostCheckState.NOT_TRIED) {
             // Do a fast blocking connect to see if anything is listening.
-            Socket socket = null;
-            try {
-                socket = new Socket();
-                socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), params.getPort()), vConnectTimeoutMillis);
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), params.getPort()),
+                        vConnectTimeoutMillis);
                 localhostCheckState = LocalhostCheckState.FOUND;
                 return true;
             } catch (IOException e) {
                 log.info("Localhost peer not detected.");
                 localhostCheckState = LocalhostCheckState.NOT_THERE;
-            } finally {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-                        // Ignore.
-                    }
-                }
             }
         }
         return false;
@@ -1085,6 +1118,19 @@ public class PeerGroup implements TransactionBroadcaster {
     }
 
     /**
+     * Gracefully drops all connected peers.
+     */
+    public void dropAllPeers() {
+        lock.lock();
+        try {
+            for (Peer peer : peers)
+                peer.close();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
      * <p>Link the given wallet to this PeerGroup. This is used for three purposes:</p>
      *
      * <ol>
@@ -1108,6 +1154,7 @@ public class PeerGroup implements TransactionBroadcaster {
             wallets.add(wallet);
             wallet.setTransactionBroadcaster(this);
             wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletCoinsReceivedEventListener);
+            wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletCoinsSentEventListener);
             wallet.addKeyChainEventListener(Threading.SAME_THREAD, walletKeyEventListener);
             wallet.addScriptsChangeEventListener(Threading.SAME_THREAD, walletScriptsEventListener);
             addPeerFilterProvider(wallet);
@@ -1180,6 +1227,7 @@ public class PeerGroup implements TransactionBroadcaster {
         wallets.remove(checkNotNull(wallet));
         peerFilterProviders.remove(wallet);
         wallet.removeCoinsReceivedEventListener(walletCoinsReceivedEventListener);
+        wallet.removeCoinsSentEventListener(walletCoinsSentEventListener);
         wallet.removeKeyChainEventListener(walletKeyEventListener);
         wallet.removeScriptsChangeEventListener(walletScriptsEventListener);
         wallet.setTransactionBroadcaster(null);
@@ -1382,7 +1430,7 @@ public class PeerGroup implements TransactionBroadcaster {
     /** You can override this to customise the creation of {@link Peer} objects. */
     @GuardedBy("lock")
     protected Peer createPeer(PeerAddress address, VersionMessage ver) {
-        return new Peer(params, ver, address, chain, downloadTxDependencyDepth);
+        return new Peer(params, ver, address, chain, requiredServices, downloadTxDependencyDepth);
     }
 
     /**
@@ -1394,7 +1442,7 @@ public class PeerGroup implements TransactionBroadcaster {
     }
 
     /**
-     * <p>Start downloading the blockchain from the first available peer.</p>
+     * <p>Start downloading the blockchain.</p>
      *
      * <p>If no peers are currently connected, the download will be started once a peer starts.  If the peer dies,
      * the download will resume with another peer.</p>
@@ -1413,12 +1461,6 @@ public class PeerGroup implements TransactionBroadcaster {
                 }
             }
             this.downloadListener = listener;
-            // TODO: be more nuanced about which peer to download from.  We can also try
-            // downloading from multiple peers and handle the case when a new peer comes along
-            // with a longer chain after we thought we were done.
-            if (!peers.isEmpty()) {
-                startBlockChainDownloadFromPeer(peers.iterator().next()); // Will add the new download listener
-            }
         } finally {
             lock.unlock();
         }
@@ -1799,7 +1841,7 @@ public class PeerGroup implements TransactionBroadcaster {
                 int chainHeight = chain != null ? chain.getBestChainHeight() : -1;
                 int mostCommonChainHeight = getMostCommonChainHeight();
                 if (!syncDone && mostCommonChainHeight > 0 && chainHeight >= mostCommonChainHeight) {
-                    log.info("End of sync detected.");
+                    log.info("End of sync detected at height {}.", chainHeight);
                     syncDone = true;
                 }
 
@@ -1807,9 +1849,9 @@ public class PeerGroup implements TransactionBroadcaster {
                     // Calculate the moving average.
                     samples[cursor++] = bytesInLastSecond;
                     if (cursor == samples.length) cursor = 0;
-                    long average = 0;
-                    for (long sample : samples) average += sample;
-                    average /= samples.length;
+                    long sampleSum = 0;
+                    for (long sample : samples) sampleSum += sample;
+                    final float average = (float) sampleSum / samples.length;
 
                     String statsString = String.format(Locale.US,
                             "%d blocks/sec, %d tx/sec, %d pre-filtered tx/sec, avg/last %.2f/%.2f kilobytes per sec, chain/common height %d/%d",
@@ -1859,7 +1901,8 @@ public class PeerGroup implements TransactionBroadcaster {
     }
     @Nullable private ChainDownloadSpeedCalculator chainDownloadSpeedCalculator;
 
-    private void startBlockChainDownloadFromPeer(Peer peer) {
+    @VisibleForTesting
+    void startBlockChainDownloadFromPeer(Peer peer) {
         lock.lock();
         try {
             setDownloadPeer(peer);
@@ -2017,12 +2060,13 @@ public class PeerGroup implements TransactionBroadcaster {
     }
 
     /**
-     * Calls {@link PeerGroup#broadcastTransaction(Transaction,int)} with getMinBroadcastConnections() as the number
-     * of connections to wait for before commencing broadcast.
+     * Calls {@link PeerGroup#broadcastTransaction(Transaction, int, boolean)} with getMinBroadcastConnections() as
+     * the number of connections to wait for before commencing broadcast. Also, if the transaction has no broadcast
+     * confirmations yet the peers will be dropped after the transaction has been sent.
      */
     @Override
     public TransactionBroadcast broadcastTransaction(final Transaction tx) {
-        return broadcastTransaction(tx, Math.max(1, getMinBroadcastConnections()));
+        return broadcastTransaction(tx, Math.max(1, getMinBroadcastConnections()), true);
     }
 
     /**
@@ -2032,6 +2076,9 @@ public class PeerGroup implements TransactionBroadcaster {
      * wrong the exception will be thrown when get() is called, or you can receive it via a callback on the
      * {@link ListenableFuture}. This method returns immediately, so if you want it to block just call get() on the
      * result.</p>
+     *
+     * <p>Optionally, peers will be dropped after they have been used for broadcasting the transaction and they have
+     * no broadcast confirmations yet.</p>
      *
      * <p>Note that if the PeerGroup is limited to only one connection (discovery is not activated) then the future
      * will complete as soon as the transaction was successfully written to that peer.</p>
@@ -2043,7 +2090,8 @@ public class PeerGroup implements TransactionBroadcaster {
      * <p>The returned {@link TransactionBroadcast} object can be used to get progress feedback,
      * which is calculated by watching the transaction propagate across the network and be announced by peers.</p>
      */
-    public TransactionBroadcast broadcastTransaction(final Transaction tx, final int minConnections) {
+    public TransactionBroadcast broadcastTransaction(final Transaction tx, final int minConnections,
+                                                     final boolean dropPeersAfterBroadcast) {
         // If we don't have a record of where this tx came from already, set it to be ourselves so Peer doesn't end up
         // redownloading it from the network redundantly.
         if (tx.getConfidence().getSource().equals(TransactionConfidence.Source.UNKNOWN)) {
@@ -2052,6 +2100,7 @@ public class PeerGroup implements TransactionBroadcaster {
         }
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
+        broadcast.setDropPeersAfterBroadcast(dropPeersAfterBroadcast && tx.getConfidence().numBroadcastPeers() == 0);
         // Send the TX to the wallet once we have a successful broadcast.
         Futures.addCallback(broadcast.future(), new FutureCallback<Transaction>() {
             @Override
@@ -2213,37 +2262,38 @@ public class PeerGroup implements TransactionBroadcaster {
         // Make sure we don't select a peer if there is no consensus about block height.
         if (mostCommonChainHeight == 0)
             return null;
-        // Make sure we don't select a peer that is behind/synchronizing itself or announces an unrealistic height.
-        List<Peer> candidates = new ArrayList<>();
+
+        // Only select peers that announce the minimum protocol and services and that we think is fully synchronized.
+        List<Peer> candidates = new LinkedList<>();
+        int highestPriority = Integer.MIN_VALUE;
+        final int MINIMUM_VERSION = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.WITNESS_VERSION);
         for (Peer peer : peers) {
-            if (!peer.getPeerVersionMessage().hasBlockChain())
+            final VersionMessage versionMessage = peer.getPeerVersionMessage();
+            if (versionMessage.clientVersion < MINIMUM_VERSION)
+                continue;
+            if (!versionMessage.hasBlockChain())
+                continue;
+            if (!versionMessage.isWitnessSupported())
                 continue;
             final long peerHeight = peer.getBestHeight();
             if (peerHeight < mostCommonChainHeight || peerHeight > mostCommonChainHeight + 1)
                 continue;
             candidates.add(peer);
+            highestPriority = Math.max(highestPriority, getPriority(peer.peerAddress));
         }
-        // Of the candidates, find the peers that meet the minimum protocol version we want to target. We could select
-        // the highest version we've seen on the assumption that newer versions are always better but we don't want to
-        // zap peers if they upgrade early. If we can't find any peers that have our preferred protocol version or
-        // better then we'll settle for the highest we found instead.
-        int highestVersion = 0, preferredVersion = 0;
-        // If/when PREFERRED_VERSION is not equal to vMinRequiredProtocolVersion, reenable the last test in PeerGroupTest.downloadPeerSelection
-        final int PREFERRED_VERSION = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLOOM_FILTER);
-        for (Peer peer : candidates) {
-            highestVersion = Math.max(peer.getPeerVersionMessage().clientVersion, highestVersion);
-            preferredVersion = Math.min(highestVersion, PREFERRED_VERSION);
-        }
-        ArrayList<Peer> candidates2 = new ArrayList<>(candidates.size());
-        for (Peer peer : candidates) {
-            if (peer.getPeerVersionMessage().clientVersion >= preferredVersion) {
-                candidates2.add(peer);
-            }
-        }
-        if (candidates2.isEmpty())
+        if (candidates.isEmpty())
             return null;
-        int index = (int) (Math.random() * candidates2.size());
-        return candidates2.get(index);
+
+        // If there is a difference in priority, consider only the highest.
+        for (Iterator<Peer> i = candidates.iterator(); i.hasNext(); ) {
+            Peer peer = i.next();
+            if (getPriority(peer.peerAddress) < highestPriority)
+                i.remove();
+        }
+
+        // Random poll.
+        int index = (int) (Math.random() * candidates.size());
+        return candidates.get(index);
     }
 
     /**

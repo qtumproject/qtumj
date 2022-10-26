@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.VerifyFlag;
 import org.bitcoinj.script.ScriptPattern;
@@ -172,7 +173,8 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
             try {
                 ListIterator<Script> prevOutIt = prevOutScripts.listIterator();
                 for (int index = 0; index < tx.getInputs().size(); index++) {
-                    tx.getInputs().get(index).getScriptSig().correctlySpends(tx, index, prevOutIt.next(), verifyFlags);
+                    tx.getInputs().get(index).getScriptSig().correctlySpends(tx, index, null, null, prevOutIt.next(),
+                            verifyFlags);
                 }
             } catch (VerificationException e) {
                 return e;
@@ -316,7 +318,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                     listScriptVerificationResults.add(future);
                 }
             }
-            if (totalFees.compareTo(params.getMaxMoney()) > 0 || block.getBlockInflation(height).add(totalFees).compareTo(coinbaseValue) < 0)
+            if (totalFees.compareTo(params.getMaxMoney()) > 0 || getBlockInflation(height).add(totalFees).compareTo(coinbaseValue) < 0)
                 throw new VerificationException("Transaction fees out of range");
             for (Future<VerificationException> future : listScriptVerificationResults) {
                 VerificationException e;
@@ -331,11 +333,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 if (e != null)
                     throw e;
             }
-        } catch (VerificationException e) {
-            scriptVerificationExecutor.shutdownNow();
-            blockStore.abortDatabaseBatchWrite();
-            throw e;
-        } catch (BlockStoreException e) {
+        } catch (VerificationException | BlockStoreException e) {
             scriptVerificationExecutor.shutdownNow();
             blockStore.abortDatabaseBatchWrite();
             throw e;
@@ -447,8 +445,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                         listScriptVerificationResults.add(future);
                     }
                 }
-                if (totalFees.compareTo(params.getMaxMoney()) > 0 ||
-                        newBlock.getHeader().getBlockInflation(newBlock.getHeight()).add(totalFees).compareTo(coinbaseValue) < 0)
+                if (totalFees.compareTo(params.getMaxMoney()) > 0 || getBlockInflation(newBlock.getHeight()).add(totalFees).compareTo(coinbaseValue) < 0)
                     throw new VerificationException("Transaction fees out of range");
                 txOutChanges = new TransactionOutputChanges(txOutsCreated, txOutsSpent);
                 for (Future<VerificationException> future : listScriptVerificationResults) {
@@ -477,11 +474,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 for (UTXO out : txOutChanges.txOutsSpent)
                     blockStore.removeUnspentTransactionOutput(out);
             }
-        } catch (VerificationException e) {
-            scriptVerificationExecutor.shutdownNow();
-            blockStore.abortDatabaseBatchWrite();
-            throw e;
-        } catch (BlockStoreException e) {
+        } catch (VerificationException | BlockStoreException e) {
             scriptVerificationExecutor.shutdownNow();
             blockStore.abortDatabaseBatchWrite();
             throw e;
@@ -505,10 +498,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
                 blockStore.addUnspentTransactionOutput(out);
             for (UTXO out : txOutChanges.txOutsCreated)
                 blockStore.removeUnspentTransactionOutput(out);
-        } catch (PrunedException e) {
-            blockStore.abortDatabaseBatchWrite();
-            throw e;
-        } catch (BlockStoreException e) {
+        } catch (PrunedException | BlockStoreException e) {
             blockStore.abortDatabaseBatchWrite();
             throw e;
         }
@@ -530,5 +520,9 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     protected StoredBlock getStoredBlockInCurrentScope(Sha256Hash hash) throws BlockStoreException {
         checkState(lock.isHeldByCurrentThread());
         return blockStore.getOnceUndoableStoredBlock(hash);
+    }
+
+    private Coin getBlockInflation(int height) {
+        return ((AbstractBitcoinNetParams) params).getBlockInflation(height);
     }
 }

@@ -30,6 +30,16 @@ import java.nio.ByteBuffer;
 public abstract class MessageSerializer {
 
     /**
+     * Create a new serializer with a specific protocol version. Mainly used to disable SegWit when parsing transactions.
+     */
+    public abstract MessageSerializer withProtocolVersion(int protocolVersion);
+
+    /**
+     * Get the protocol version of this serializer.
+     */
+    public abstract int getProtocolVersion();
+
+    /**
      * Reads a message from the given ByteBuffer and returns it.
      */
     public abstract Message deserialize(ByteBuffer in) throws ProtocolException, IOException, UnsupportedOperationException;
@@ -55,14 +65,13 @@ public abstract class MessageSerializer {
      * Make an address message from the payload. Extension point for alternative
      * serialization format support.
      */
-    public abstract AddressMessage makeAddressMessage(byte[] payloadBytes, int length) throws ProtocolException, UnsupportedOperationException;
+    public abstract AddressV1Message makeAddressV1Message(byte[] payloadBytes, int length) throws ProtocolException, UnsupportedOperationException;
 
     /**
-     * Make an alert message from the payload. Extension point for alternative
+     * Make an address message from the payload. Extension point for alternative
      * serialization format support.
      */
-    public abstract Message makeAlertMessage(byte[] payloadBytes) throws ProtocolException, UnsupportedOperationException;
-
+    public abstract AddressV2Message makeAddressV2Message(byte[] payloadBytes, int length) throws ProtocolException, UnsupportedOperationException;
 
     /**
      * Make a block from the payload, using an offset of zero and the payload

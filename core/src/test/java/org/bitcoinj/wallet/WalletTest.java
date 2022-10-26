@@ -36,6 +36,7 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.TransactionWitness;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
@@ -83,12 +84,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.bitcoinj.core.Coin.*;
 import static org.bitcoinj.core.Utils.HEX;
 import static org.bitcoinj.testing.FakeTxBuilder.*;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.hamcrest.Matchers.closeTo;
 import static org.junit.Assert.*;
 
 public class WalletTest extends TestWithWallet {
@@ -2711,11 +2713,19 @@ public class WalletTest extends TestWithWallet {
         request.feePerKb = Transaction.DEFAULT_TX_FEE;
         mySegwitWallet.completeTx(request);
         assertEquals(Coin.valueOf(56000), request.tx.getFee());
+
+        // TOOD: QTUM?
+        // Fee test, absolute and per virtual kilobyte
+        Coin fee = request.tx.getFee();
+        int vsize = request.tx.getVsize();
+        Coin feePerVkb = fee.multiply(1000).divide(vsize);
+        assertEquals(Coin.valueOf(14100), fee);
+        assertEquals(Transaction.DEFAULT_TX_FEE, feePerVkb);
     }
 
     @Test
     public void lowerThanDefaultFee() throws InsufficientMoneyException {
-        int feeFactor = 50;
+        int feeFactor = 200;
         Coin fee = Transaction.DEFAULT_TX_FEE.divide(feeFactor);
         receiveATransactionAmount(wallet, myAddress, Coin.COIN);
         SendRequest req = SendRequest.to(myAddress, Coin.CENT);
@@ -2729,7 +2739,8 @@ public class WalletTest extends TestWithWallet {
         emptyReq.emptyWallet = true;
         emptyReq.allowUnconfirmed();
         wallet.completeTx(emptyReq);
-        assertEquals(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE, emptyReq.tx.getFee());
+        final Coin feePerKb = emptyReq.tx.getFee().multiply(1000).divide(emptyReq.tx.getVsize());
+        assertThat((double) feePerKb.toSat(), closeTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.toSat(),20));
         wallet.commitTx(emptyReq.tx);
     }
 
@@ -2786,7 +2797,7 @@ public class WalletTest extends TestWithWallet {
         assertEquals(CENT, request2.tx.getOutput(0).getValue());
         // Make sure it was properly signed
         request2.tx.getInput(0).getScriptSig().correctlySpends(
-                request2.tx, 0, tx3.getOutput(0).getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
+                request2.tx, 0, null, null, tx3.getOutput(0).getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
 
         // However, if there is no connected output, we will grab a COIN output anyway and add the CENT to fee
         SendRequest request3 = SendRequest.to(OTHER_ADDRESS, CENT);
@@ -3230,7 +3241,7 @@ public class WalletTest extends TestWithWallet {
                 assertArrayEquals(expectedSig, input.getScriptSig().getChunks().get(0).data);
             } else if (input.getConnectedOutput().getParentTransaction().equals(t3)) {
                 input.getScriptSig().correctlySpends(
-                        req.tx, i, t3.getOutput(0).getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
+                        req.tx, i, null, null, t3.getOutput(0).getScriptPubKey(), Script.ALL_VERIFY_FLAGS);
             }
         }
         assertTrue(TransactionSignature.isEncodingCanonical(dummySig));
@@ -3726,5 +3737,72 @@ public class WalletTest extends TestWithWallet {
         assertEquals(wallet.currentReceiveKey(), clone.currentReceiveKey());
         assertEquals(wallet.freshReceiveAddress(Script.ScriptType.P2PKH),
                 clone.freshReceiveAddress(Script.ScriptType.P2PKH));
+    }
+
+    @Test
+    public void oneTxTwoWallets() {
+        Wallet wallet1 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2WPKH);
+        Wallet wallet2 = Wallet.createDeterministic(UNITTEST, Script.ScriptType.P2WPKH);
+        Address address1 = wallet1.freshReceiveAddress(Script.ScriptType.P2PKH);
+        Address address2 = wallet2.freshReceiveAddress(Script.ScriptType.P2PKH);
+
+        // Both wallet1 and wallet2 receive coins in the same tx
+        Transaction tx0 = createFakeTx(UNITTEST);
+        Transaction tx1 = new Transaction(UNITTEST);
+        tx1.addInput(tx0.getOutput(0));
+        tx1.addOutput(COIN, address1); // to wallet1
+        tx1.addOutput(COIN, address2); // to wallet2
+        tx1.addOutput(COIN, OTHER_ADDRESS);
+        wallet1.receivePending(tx1, null);
+        wallet2.receivePending(tx1, null);
+
+        // Confirm transactions in both wallets
+        StoredBlock block = createFakeBlock(blockStore, Block.BLOCK_HEIGHT_GENESIS, tx1).storedBlock;
+        wallet1.notifyTransactionIsInBlock(tx1.getTxId(), block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 1);
+        wallet2.notifyTransactionIsInBlock(tx1.getTxId(), block, AbstractBlockChain.NewBlockType.BEST_CHAIN, 1);
+
+        assertEquals(COIN, wallet1.getTotalReceived());
+        assertEquals(COIN, wallet2.getTotalReceived());
+
+        // Spend two outputs from the same tx from two different wallets
+        SendRequest sendReq = SendRequest.to(OTHER_ADDRESS, valueOf(2, 0));
+        sendReq.tx.addInput(tx1.getOutput(0));
+        sendReq.tx.addInput(tx1.getOutput(1));
+
+        // Wallet1 sign input 0
+        TransactionInput inputW1 = sendReq.tx.getInput(0);
+        ECKey sigKey1 = inputW1.getOutpoint().getConnectedKey(wallet1);
+        Script scriptCode1 = ScriptBuilder.createP2PKHOutputScript(sigKey1);
+        TransactionSignature txSig1 = sendReq.tx.calculateWitnessSignature(0, sigKey1, scriptCode1,
+                inputW1.getValue(), Transaction.SigHash.ALL, false);
+        inputW1.setScriptSig(ScriptBuilder.createEmpty());
+        inputW1.setWitness(TransactionWitness.redeemP2WPKH(txSig1, sigKey1));
+
+        // Wallet2 sign input 1
+        TransactionInput inputW2 = sendReq.tx.getInput(1);
+        ECKey sigKey2 = inputW2.getOutpoint().getConnectedKey(wallet2);
+        Script scriptCode2 = ScriptBuilder.createP2PKHOutputScript(sigKey2);
+        TransactionSignature txSig2 = sendReq.tx.calculateWitnessSignature(0, sigKey2, scriptCode2,
+                inputW2.getValue(), Transaction.SigHash.ALL, false);
+        inputW2.setScriptSig(ScriptBuilder.createEmpty());
+        inputW2.setWitness(TransactionWitness.redeemP2WPKH(txSig2, sigKey2));
+
+        wallet1.commitTx(sendReq.tx);
+        wallet2.commitTx(sendReq.tx);
+        assertEquals(ZERO, wallet1.getBalance());
+        assertEquals(ZERO, wallet2.getBalance());
+
+        assertTrue(wallet1.isConsistent());
+        assertTrue(wallet2.isConsistent());
+
+        Transaction txW1 = wallet1.getTransaction(tx1.getTxId());
+        Transaction txW2 = wallet2.getTransaction(tx1.getTxId());
+
+        assertEquals(txW1, tx1);
+        assertNotSame(txW1, tx1);
+        assertEquals(txW2, tx1);
+        assertNotSame(txW2, tx1);
+        assertEquals(txW1, txW2);
+        assertNotSame(txW1, txW2);
     }
 }

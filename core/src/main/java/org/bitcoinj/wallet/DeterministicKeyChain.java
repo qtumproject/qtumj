@@ -22,6 +22,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 
@@ -426,6 +427,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             hierarchy.putKey(key);
             basicKeyChain.importKey(key);
         }
+        for (ListenerRegistration<KeyChainEventListener> listener : chain.basicKeyChain.getListeners()) {
+            basicKeyChain.addEventListener(listener);
+        }
     }
 
     public HDPath getAccountPath() {
@@ -756,7 +760,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             DeterministicKey key = (DeterministicKey) entry.getKey();
             Protos.Key.Builder proto = entry.getValue();
             proto.setType(Protos.Key.Type.DETERMINISTIC_KEY);
-            final Protos.DeterministicKey.Builder detKey = proto.getDeterministicKeyBuilder();
+            final Protos.DeterministicKey.Builder detKey = proto.getDeterministicKey().toBuilder();
             detKey.setChainCode(ByteString.copyFrom(key.getChainCode()));
             for (ChildNumber num : key.getPath())
                 detKey.addPath(num.i());
@@ -773,6 +777,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
             if (entries.isEmpty() && isFollowing()) {
                 detKey.setIsFollowing(true);
             }
+            proto.setDeterministicKey(detKey);
             if (key.getParent() != null) {
                 // HD keys inherit the timestamp of their parent if they have one, so no need to serialize it.
                 proto.clearCreationTimestamp();
@@ -1033,6 +1038,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         }
         chain.issuedExternalKeys = issuedExternalKeys;
         chain.issuedInternalKeys = issuedInternalKeys;
+        for (ListenerRegistration<KeyChainEventListener> listener : basicKeyChain.getListeners()) {
+            chain.basicKeyChain.addEventListener(listener);
+        }
         return chain;
     }
 
@@ -1318,9 +1326,9 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         // the seed.
         if (seed.isEncrypted() && seed.getEncryptedSeedData() != null) {
             EncryptedData data = seed.getEncryptedSeedData();
-            proto.getEncryptedDeterministicSeedBuilder()
+            proto.setEncryptedDeterministicSeed(proto.getEncryptedDeterministicSeed().toBuilder()
                     .setEncryptedPrivateKey(ByteString.copyFrom(data.encryptedBytes))
-                    .setInitialisationVector(ByteString.copyFrom(data.initialisationVector));
+                    .setInitialisationVector(ByteString.copyFrom(data.initialisationVector)));
             // We don't allow mixing of encryption types at the moment.
             checkState(seed.getEncryptionType() == Protos.Wallet.EncryptionType.ENCRYPTED_SCRYPT_AES);
         } else {

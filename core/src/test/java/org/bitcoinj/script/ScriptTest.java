@@ -41,6 +41,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static org.bitcoinj.core.Transaction.SERIALIZE_TRANSACTION_NO_WITNESS;
 import static org.bitcoinj.core.Utils.HEX;
 import static org.bitcoinj.script.ScriptOpCodes.OP_0;
 import static org.bitcoinj.script.ScriptOpCodes.OP_INVALIDOPCODE;
@@ -297,7 +298,7 @@ public class ScriptTest {
                 Script scriptPubKey = parseScriptString(test.get(1).asText());
                 Transaction txCredit = buildCreditingTransaction(scriptPubKey);
                 Transaction txSpend = buildSpendingTransaction(txCredit, scriptSig);
-                scriptSig.correctlySpends(txSpend, 0, scriptPubKey, verifyFlags);
+                scriptSig.correctlySpends(txSpend, 0, null, null, scriptPubKey, verifyFlags);
                 if (!expectedError.equals(ScriptError.SCRIPT_ERR_OK))
                     fail(test + " is expected to fail");
             } catch (ScriptException e) {
@@ -374,8 +375,8 @@ public class ScriptTest {
                     if (input.getOutpoint().getIndex() == 0xffffffffL)
                         input.getOutpoint().setIndex(-1);
                     assertTrue(scriptPubKeys.containsKey(input.getOutpoint()));
-                    input.getScriptSig().correctlySpends(transaction, i, scriptPubKeys.get(input.getOutpoint()),
-                            verifyFlags);
+                    input.getScriptSig().correctlySpends(transaction, i, null, null,
+                            scriptPubKeys.get(input.getOutpoint()), verifyFlags);
                 }
             } catch (Exception e) {
                 System.err.println(test);
@@ -394,7 +395,17 @@ public class ScriptTest {
             if (test.isArray() && test.size() == 1 && test.get(0).isTextual())
                 continue; // This is a comment.
             Map<TransactionOutPoint, Script> scriptPubKeys = parseScriptPubKeys(test.get(0));
-            Transaction transaction = TESTNET.getDefaultSerializer().makeTransaction(HEX.decode(test.get(1).asText().toLowerCase()));
+            byte[] txBytes = HEX.decode(test.get(1).asText().toLowerCase());
+            MessageSerializer serializer = TESTNET.getDefaultSerializer();
+            Transaction transaction;
+            try {
+                transaction = serializer.makeTransaction(txBytes);
+            } catch (ProtocolException ignore) {
+                // Try to parse as a no-witness transaction because some vectors are 0-input, 1-output txs that fail
+                // to correctly parse as witness transactions.
+                int protoVersionNoWitness = serializer.getProtocolVersion() | SERIALIZE_TRANSACTION_NO_WITNESS;
+                transaction = serializer.withProtocolVersion(protoVersionNoWitness).makeTransaction(txBytes);
+            }
             Set<VerifyFlag> verifyFlags = parseVerifyFlags(test.get(2).asText());
 
             boolean valid = true;
@@ -417,15 +428,17 @@ public class ScriptTest {
                 TransactionInput input = transaction.getInputs().get(i);
                 assertTrue(scriptPubKeys.containsKey(input.getOutpoint()));
                 try {
-                    input.getScriptSig().correctlySpends(transaction, i, scriptPubKeys.get(input.getOutpoint()),
-                            verifyFlags);
+                    input.getScriptSig().correctlySpends(transaction, i, null, null,
+                            scriptPubKeys.get(input.getOutpoint()), verifyFlags);
                 } catch (VerificationException e) {
                     valid = false;
                 }
             }
 
-            if (valid)
+            if (valid) {
+                System.out.println(test);
                 fail();
+            }
         }
     }
 
@@ -436,12 +449,22 @@ public class ScriptTest {
         Address toAddress = LegacyAddress.fromKey(TESTNET, toKey);
         assertEquals(toAddress, ScriptBuilder.createP2PKOutputScript(toKey).getToAddress(TESTNET, true));
         // pay to pubkey hash
-        assertEquals(toAddress, ScriptBuilder.createOutputScript(toAddress).getToAddress(TESTNET, true));
+        assertEquals(toAddress, ScriptBuilder.createOutputScript(toAddress).getToAddress(TESTNET));
         // pay to script hash
         Script p2shScript = ScriptBuilder.createP2SHOutputScript(new byte[20]);
         Address scriptAddress = LegacyAddress.fromScriptHash(TESTNET,
                 ScriptPattern.extractHashFromP2SH(p2shScript));
-        assertEquals(scriptAddress, p2shScript.getToAddress(TESTNET, true));
+        assertEquals(scriptAddress, p2shScript.getToAddress(TESTNET));
+        // P2WPKH
+        toAddress = SegwitAddress.fromKey(TESTNET, toKey);
+        assertEquals(toAddress, ScriptBuilder.createOutputScript(toAddress).getToAddress(TESTNET));
+        // P2WSH
+        Script p2wshScript = ScriptBuilder.createP2WSHOutputScript(new byte[32]);
+        scriptAddress = SegwitAddress.fromHash(TESTNET, ScriptPattern.extractHashFromP2WH(p2wshScript));
+        assertEquals(scriptAddress, p2wshScript.getToAddress(TESTNET));
+        // P2TR
+        toAddress = SegwitAddress.fromProgram(TESTNET, 1, new byte[32]);
+        assertEquals(toAddress, ScriptBuilder.createOutputScript(toAddress).getToAddress(TESTNET));
     }
 
     @Test(expected = ScriptException.class)

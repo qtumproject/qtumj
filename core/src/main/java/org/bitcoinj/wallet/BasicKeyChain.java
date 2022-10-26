@@ -320,9 +320,9 @@ public class BasicKeyChain implements EncryptableKeyChain {
             // which the leaf keys chain to an encrypted parent and rederive their private keys on the fly. In that
             // case the caller in DeterministicKeyChain will take care of setting the type.
             EncryptedData data = item.getEncryptedData();
-            proto.getEncryptedDataBuilder()
+            proto.setEncryptedData(proto.getEncryptedData().toBuilder()
                     .setEncryptedPrivateKey(ByteString.copyFrom(data.encryptedBytes))
-                    .setInitialisationVector(ByteString.copyFrom(data.initialisationVector));
+                    .setInitialisationVector(ByteString.copyFrom(data.initialisationVector)));
             // We don't allow mixing of encryption types at the moment.
             checkState(item.getEncryptionType() == Protos.Wallet.EncryptionType.ENCRYPTED_SCRYPT_AES);
             proto.setType(Protos.Key.Type.ENCRYPTED_SCRYPT_AES);
@@ -408,7 +408,11 @@ public class BasicKeyChain implements EncryptableKeyChain {
 
     @Override
     public void addEventListener(KeyChainEventListener listener, Executor executor) {
-        listeners.add(new ListenerRegistration<>(listener, executor));
+        addEventListener(new ListenerRegistration<>(listener, executor));
+    }
+
+    /* package private */ void addEventListener(ListenerRegistration<KeyChainEventListener> listener) {
+        listeners.add(listener);
     }
 
     @Override
@@ -475,6 +479,9 @@ public class BasicKeyChain implements EncryptableKeyChain {
                     throw new KeyCrypterException("The key " + key.toString() + " cannot be successfully decrypted after encryption so aborting wallet encryption.");
                 encrypted.importKeyLocked(encryptedKey);
             }
+            for (ListenerRegistration<KeyChainEventListener> listener : listeners) {
+                encrypted.addEventListener(listener);
+            }
             return encrypted;
         } finally {
             lock.unlock();
@@ -499,6 +506,9 @@ public class BasicKeyChain implements EncryptableKeyChain {
             BasicKeyChain decrypted = new BasicKeyChain();
             for (ECKey key : hashToKeys.values()) {
                 decrypted.importKeyLocked(key.decrypt(aesKey));
+            }
+            for (ListenerRegistration<KeyChainEventListener> listener : listeners) {
+                decrypted.addEventListener(listener);
             }
             return decrypted;
         } finally {

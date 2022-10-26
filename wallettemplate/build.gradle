@@ -2,18 +2,25 @@ plugins {
     id 'java'
     id 'eclipse'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.7'
+    id 'org.openjfx.javafxplugin' version '0.0.8'
 }
 
 dependencies {
     implementation project(':bitcoinj-core')
+<<<<<<< HEAD
     implementation 'com.google.guava:guava:31.0.1-android'
     implementation 'de.jensd:fontawesomefx:8.0.0'
     implementation 'com.google.zxing:core:3.3.3'
     implementation 'org.slf4j:slf4j-jdk14:1.7.35'
+=======
+    implementation 'de.jensd:fontawesomefx:8.0.0'
+    implementation 'com.google.zxing:core:3.4.1'
+    implementation 'org.slf4j:slf4j-jdk14:1.7.32'
+>>>>>>> v0.16.1
 }
 
 javafx {
+    version = '17.0.0.1'
     modules = [ 'javafx.controls', 'javafx.fxml' ]
 }
 

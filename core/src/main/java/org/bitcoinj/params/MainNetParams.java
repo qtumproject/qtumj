@@ -17,12 +17,16 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.*;
+import java.net.URI;
 
-import java.net.*;
+import org.bitcoinj.core.Block;
+import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.net.discovery.HttpDiscovery;
 
-import static com.google.common.base.Preconditions.*;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Parameters for the main production network on which people trade goods and services.
@@ -31,10 +35,14 @@ public class MainNetParams extends AbstractQtumNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
+    private static final long GENESIS_TIME = 1231006505;
+    private static final long GENESIS_NONCE = 2083236893;
+    private static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
 
     public MainNetParams() {
         super();
-        interval = INTERVAL;
+        id = ID_MAINNET;
+
         targetTimespan = TARGET_TIMESPAN;
         targetTimespanV2 = TARGET_TIMESPAN_V2;
         reducedBlocktimeTimespan = 1000;
@@ -57,6 +65,17 @@ public class MainNetParams extends AbstractQtumNetParams {
         segwitAddressHrp = "qc";
         port = 3888;
         packetMagic = 0xf1cfa6d3L;
+        /*
+        maxTarget = Utils.decodeCompactBits(Block.STANDARD_MAX_DIFFICULTY_TARGET);
+
+        port = 8333;
+        packetMagic = 0xf9beb4d9L;
+        dumpedPrivateKeyHeader = 128;
+        addressHeader = 0;
+        p2shHeader = 5;
+        segwitAddressHrp = "bc";
+        spendableCoinbaseDepth = 100;
+         */
         bip32HeaderP2PKHpub = 0x0488b21e; // The 4 byte header that serializes in base58 to "xpub".
         bip32HeaderP2PKHpriv = 0x0488ade4; // The 4 byte header that serializes in base58 to "xprv"
         bip32HeaderP2WPKHpub = 0x04b24746; // The 4 byte header that serializes in base58 to "zpub".
@@ -97,6 +116,19 @@ public class MainNetParams extends AbstractQtumNetParams {
                 "qtum6.dynu.net",
                 "qtum7.dynu.net",
         };
+        /*
+        httpSeeds = new HttpDiscovery.Details[] {
+                // Andreas Schildbach
+                new HttpDiscovery.Details(
+                        ECKey.fromPublicOnly(Utils.HEX.decode("0238746c59d46d5408bf8b1d0af5740fe1a6e1703fcb56b2953f0b965c740d256f")),
+                        URI.create("http://httpseed.bitcoin.schildbach.de/peers")
+                ),
+                // Anton Kumaigorodski
+                new HttpDiscovery.Details(
+                        ECKey.fromPublicOnly(Utils.HEX.decode("02c682e83db4efac3c841d6fa544211fb1e4a55061060019b3682fc306f228c558")),
+                        URI.create("http://lightning-wallet.com:8081/peers")
+                )
+         */
 
         // These are in big-endian format, which is what the SeedPeers code expects.
         // Updated Dec. 17th 2019
@@ -145,6 +177,20 @@ public class MainNetParams extends AbstractQtumNetParams {
             instance = new MainNetParams();
         }
         return instance;
+    }
+
+    @Override
+    public Block getGenesisBlock() {
+        synchronized (GENESIS_HASH) {
+            if (genesisBlock == null) {
+                genesisBlock = Block.createGenesis(this);
+                genesisBlock.setDifficultyTarget(Block.STANDARD_MAX_DIFFICULTY_TARGET);
+                genesisBlock.setTime(GENESIS_TIME);
+                genesisBlock.setNonce(GENESIS_NONCE);
+                checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
+            }
+        }
+        return genesisBlock;
     }
 
     @Override

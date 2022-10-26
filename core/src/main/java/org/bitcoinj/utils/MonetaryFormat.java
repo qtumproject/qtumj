@@ -53,6 +53,8 @@ public final class MonetaryFormat {
     /** Standard format for the µBTC denomination. */
     public static final MonetaryFormat UQTUM = new MonetaryFormat().shift(6).minDecimals(0).optionalDecimals(2);
     /** Standard format for fiat amounts. */
+    public static final MonetaryFormat SAT = new MonetaryFormat().shift(8).minDecimals(0).optionalDecimals(0);
+    /** Standard format for fiat amounts. */
     public static final MonetaryFormat FIAT = new MonetaryFormat().shift(0).minDecimals(2).repeatOptionalDecimals(2, 1);
     /** Currency code for base 1 QTUM. */
     public static final String CODE_QTUM = "QTUM";
@@ -60,12 +62,16 @@ public final class MonetaryFormat {
     public static final String CODE_MQTUM = "mQTUM";
     /** Currency code for base 1/1000000 QTUM. */
     public static final String CODE_UQTUM = "µQTUM";
+    /** Currency code for base 1 satoshi. */
+    public static final String CODE_SAT = "sat";
     /** Currency symbol for base 1 QTUM. */
     public static final String SYMBOL_QTUM = "\u211a";
     /** Currency symbol for base 1/1000 QTUM. */
     public static final String SYMBOL_MQTUM = "m" + SYMBOL_QTUM;
     /** Currency symbol for base 1/1000000 QTUM. */
     public static final String SYMBOL_UQTUM = "µ" + SYMBOL_QTUM;
+    /** Currency symbol for base 1 satoshi. */
+    public static final String SYMBOL_SAT = "\u0219";
 
     public static final int MAX_DECIMALS = 8;
 
@@ -297,11 +303,19 @@ public final class MonetaryFormat {
                 shift, roundingMode, codes, codeSeparator, codePrefixed);
     }
 
+    /**
+     * Construct a MonetaryFormat with the default configuration.
+     */
     public MonetaryFormat() {
         this(false);
     }
 
-    public MonetaryFormat(boolean useBitcoinSymbol) {
+    /**
+     * Construct a MonetaryFormat with the default configuration.
+     *
+     * @param useSymbol use unicode symbols instead of the BTC and sat codes
+     */
+    public MonetaryFormat(boolean useSymbol) {
         // defaults
         this.negativeSign = '-';
         this.positiveSign = 0; // none
@@ -311,10 +325,11 @@ public final class MonetaryFormat {
         this.decimalGroups = null;
         this.shift = 0;
         this.roundingMode = RoundingMode.HALF_UP;
-        this.codes = new String[MAX_DECIMALS];
-        this.codes[0] = useBitcoinSymbol ? SYMBOL_QTUM : CODE_QTUM;
-        this.codes[3] = useBitcoinSymbol ? SYMBOL_MQTUM : CODE_MQTUM;
-        this.codes[6] = useBitcoinSymbol ? SYMBOL_UQTUM : CODE_UQTUM;
+        this.codes = new String[MAX_DECIMALS + 1];
+        this.codes[0] = useSymbol ? SYMBOL_QTUM : CODE_QTUM;
+        this.codes[3] = useSymbol ? SYMBOL_MQTUM : CODE_MQTUM;
+        this.codes[6] = useSymbol ? SYMBOL_UQTUM : CODE_UQTUM;
+        this.codes[8] = useSymbol ? SYMBOL_SAT : CODE_SAT;
         this.codeSeparator = ' ';
         this.codePrefixed = true;
     }
@@ -350,16 +365,18 @@ public final class MonetaryFormat {
 
         // rounding
         long satoshis = Math.abs(monetary.getValue());
-        long precisionDivisor = checkedPow(10, smallestUnitExponent - shift - maxDecimals);
+        int potentialDecimals = smallestUnitExponent - shift;
+        long precisionDivisor = checkedPow(10, potentialDecimals - maxDecimals);
         satoshis = checkedMultiply(divide(satoshis, precisionDivisor, roundingMode), precisionDivisor);
 
         // shifting
-        long shiftDivisor = checkedPow(10, smallestUnitExponent - shift);
+        long shiftDivisor = checkedPow(10, potentialDecimals);
         long numbers = satoshis / shiftDivisor;
         long decimals = satoshis % shiftDivisor;
 
         // formatting
-        String decimalsStr = String.format(Locale.US, "%0" + (smallestUnitExponent - shift) + "d", decimals);
+        String decimalsStr = potentialDecimals > 0 ? String.format(Locale.US,
+                "%0" + Integer.toString(potentialDecimals) + "d", decimals) : "";
         StringBuilder str = new StringBuilder(decimalsStr);
         while (str.length() > minDecimals && str.charAt(str.length() - 1) == '0')
             str.setLength(str.length() - 1); // trim trailing zero

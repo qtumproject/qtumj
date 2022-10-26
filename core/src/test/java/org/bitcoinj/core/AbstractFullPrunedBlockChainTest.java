@@ -30,6 +30,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,15 +54,21 @@ public abstract class AbstractFullPrunedBlockChainTest {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractFullPrunedBlockChainTest.class);
 
-    protected static final NetworkParameters PARAMS = new UnitTestParams() {
-        @Override public int getInterval() {
-            return 10000;
-        }
-    };
+    protected static NetworkParameters PARAMS;
     private static final NetworkParameters MAINNET = MainNetParams.get();
 
     protected FullPrunedBlockChain chain;
     protected FullPrunedBlockStore store;
+
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        Utils.resetMocking();
+        PARAMS = new UnitTestParams() {
+            @Override public int getInterval() {
+                return 10000;
+            }
+        };
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -185,8 +192,8 @@ public abstract class AbstractFullPrunedBlockChainTest {
             chain.add(rollingBlock);
         }
         
-        WeakReference<UTXO> out = new WeakReference<UTXO>
-                                       (store.getTransactionOutput(spendableOutput.getHash(), spendableOutput.getIndex()));
+        WeakReference<UTXO> out = new WeakReference<>
+                (store.getTransactionOutput(spendableOutput.getHash(), spendableOutput.getIndex()));
         rollingBlock = rollingBlock.createNextBlock(null);
         
         Transaction t = new Transaction(PARAMS);

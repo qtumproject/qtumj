@@ -409,8 +409,7 @@ public class WalletAppKit extends AbstractIdleService {
 
     private Wallet loadWallet(boolean shouldReplayWallet) throws Exception {
         Wallet wallet;
-        FileInputStream walletStream = new FileInputStream(vWalletFile);
-        try {
+        try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
             List<WalletExtension> extensions = provideWalletExtensions();
             WalletExtension[] extArray = extensions.toArray(new WalletExtension[extensions.size()]);
             Protos.Wallet proto = WalletProtobufSerializer.parseToProto(walletStream);
@@ -422,8 +421,6 @@ public class WalletAppKit extends AbstractIdleService {
             wallet = serializer.readWallet(params, extArray, proto);
             if (shouldReplayWallet)
                 wallet.reset();
-        } finally {
-            walletStream.close();
         }
         return wallet;
     }
@@ -433,7 +430,7 @@ public class WalletAppKit extends AbstractIdleService {
         if (restoreFromSeed != null)
             kcg.fromSeed(restoreFromSeed, preferredOutputScriptType);
         else if (restoreFromKey != null)
-            kcg.addChain(DeterministicKeyChain.builder().spend(restoreFromKey).outputScriptType(preferredOutputScriptType).build());
+            kcg.fromKey(restoreFromKey, preferredOutputScriptType).build();
         else
             kcg.fromRandom(preferredOutputScriptType);
         if (walletFactory != null) {

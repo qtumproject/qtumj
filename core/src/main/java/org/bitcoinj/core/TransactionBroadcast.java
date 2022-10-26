@@ -44,6 +44,7 @@ public class TransactionBroadcast {
     private final PeerGroup peerGroup;
     private final Transaction tx;
     private int minConnections;
+    private boolean dropPeersAfterBroadcast = false;
     private int numWaitingFor;
 
     /** Used for shuffling the peers before broadcast: unit tests can replace this to make themselves deterministic. */
@@ -86,6 +87,10 @@ public class TransactionBroadcast {
 
     public void setMinConnections(int minConnections) {
         this.minConnections = minConnections;
+    }
+
+    public void setDropPeersAfterBroadcast(boolean dropPeersAfterBroadcast) {
+        this.dropPeersAfterBroadcast = dropPeersAfterBroadcast;
     }
 
     private PreMessageReceivedEventListener rejectionListener = new PreMessageReceivedEventListener() {
@@ -136,9 +141,7 @@ public class TransactionBroadcast {
             // a big effect.
             List<Peer> peers = peerGroup.getConnectedPeers();    // snapshots
             // Prepare to send the transaction by adding a listener that'll be called when confidence changes.
-            // Only bother with this if we might actually hear back:
-            if (minConnections > 1)
-                tx.getConfidence().addEventListener(new ConfidenceChange());
+            tx.getConfidence().addEventListener(new ConfidenceChange());
             // Bitcoin Core sends an inv in this case and then lets the peer request the tx data. We just
             // blast out the TX here for a couple of reasons. Firstly it's simpler: in the case where we have
             // just a single connection we don't have to wait for getdata to be received and handled before
@@ -154,22 +157,25 @@ public class TransactionBroadcast {
             peers = peers.subList(0, numToBroadcastTo);
             log.info("broadcastTransaction: We have {} peers, adding {} to the memory pool", numConnected, tx.getTxId());
             log.info("Sending to {} peers, will wait for {}, sending to: {}", numToBroadcastTo, numWaitingFor, Joiner.on(",").join(peers));
-            for (Peer peer : peers) {
+            for (final Peer peer : peers) {
                 try {
-                    peer.sendMessage(tx);
+                    ListenableFuture future = peer.sendMessage(tx);
+                    if (dropPeersAfterBroadcast) {
+                        // We drop the peer shortly after the transaction has been sent, because this peer will not
+                        // send us back useful broadcast confirmations.
+                        future.addListener(new Runnable() {
+                            @Override
+                            public void run() {
+                                Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+                                peer.close();
+                            }
+                        }, Threading.THREAD_POOL);
+                    }
                     // We don't record the peer as having seen the tx in the memory pool because we want to track only
                     // how many peers announced to us.
                 } catch (Exception e) {
                     log.error("Caught exception sending to {}", peer, e);
                 }
-            }
-            // If we've been limited to talk to only one peer, we can't wait to hear back because the
-            // remote peer won't tell us about transactions we just announced to it for obvious reasons.
-            // So we just have to assume we're done, at that point. This happens when we're not given
-            // any peer discovery source and the user just calls connectTo() once.
-            if (minConnections == 1) {
-                peerGroup.removePreMessageReceivedEventListener(rejectionListener);
-                future.set(tx);
             }
         }
     }

@@ -22,6 +22,8 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.net.*;
 import org.bitcoinj.store.*;
 import org.bitcoinj.utils.*;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
 
 import java.net.*;
 import java.util.concurrent.*;
@@ -46,6 +48,9 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         this.clientType = clientType;
     }
 
+    @Rule
+    public Timeout globalTimeout = Timeout.seconds(15);
+
     @Override
     public void setUp() throws Exception {
         setUp(new MemoryBlockStore(UNITTEST));
@@ -56,8 +61,10 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         super.setUp(blockStore);
 
         remoteVersionMessage = new VersionMessage(UNITTEST, 1);
-        remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK;
-        remoteVersionMessage.clientVersion = NotFoundMessage.MIN_PROTOCOL_VERSION;
+        remoteVersionMessage.localServices =
+                VersionMessage.NODE_NETWORK | VersionMessage.NODE_BLOOM | VersionMessage.NODE_WITNESS;
+        remoteVersionMessage.clientVersion =
+                NetworkParameters.ProtocolVersion.WITNESS_VERSION.getQtumProtocolVersion();
         blockJobs = false;
         initPeerGroup();
     }
@@ -67,7 +74,6 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         try {
             super.tearDown();
             blockJobs = false;
-            Utils.finishMockSleep();
             if (peerGroup.isRunning())
                 peerGroup.stopAsync();
         } catch (Exception e) {
@@ -152,6 +158,7 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
 
     private void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
         checkState(writeTarget.nextMessageBlocking() instanceof VersionMessage);
+        checkState(writeTarget.nextMessageBlocking() instanceof SendAddrV2Message);
         checkState(writeTarget.nextMessageBlocking() instanceof VersionAck);
         if (versionMessage.isBloomFilteringSupported()) {
             checkState(writeTarget.nextMessageBlocking() instanceof BloomFilter);

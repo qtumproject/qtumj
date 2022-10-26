@@ -100,7 +100,7 @@ public class GenerateLowSTests {
         final TransactionInput input = proposedTransaction.partialTx.getInput(0);
 
         input.verify(output);
-        input.getScriptSig().correctlySpends(outputTransaction, 0, output.getScriptPubKey(),
+        input.getScriptSig().correctlySpends(outputTransaction, 0, null, null, output.getScriptPubKey(),
             EnumSet.of(Script.VerifyFlag.DERSIG, Script.VerifyFlag.P2SH));
 
         final Script scriptSig = input.getScriptSig();
@@ -112,13 +112,13 @@ public class GenerateLowSTests {
             + inputTransaction.getTxId() + "\", "
             + output.getIndex() + ", \""
             + scriptToString(output.getScriptPubKey()) + "\"]],\n"
-            + "\"" + Utils.HEX.encode(proposedTransaction.partialTx.unsafeBitcoinSerialize()) + "\", \""
+            + "\"" + proposedTransaction.partialTx.toHexString() + "\", \""
             + Script.VerifyFlag.P2SH.name() + "," + Script.VerifyFlag.LOW_S.name() + "\"],");
 
         final BigInteger highS = HIGH_S_DIFFERENCE.subtract(signature.s);
         final TransactionSignature highSig = new TransactionSignature(signature.r, highS);
         input.setScriptSig(new ScriptBuilder().data(highSig.encodeToBitcoin()).data(scriptSig.getChunks().get(1).data).build());
-        input.getScriptSig().correctlySpends(outputTransaction, 0, output.getScriptPubKey(),
+        input.getScriptSig().correctlySpends(outputTransaction, 0, null, null, output.getScriptPubKey(),
             EnumSet.of(Script.VerifyFlag.P2SH));
 
         // A high-S transaction without the LOW_S flag, for the tx_valid.json set
@@ -127,7 +127,7 @@ public class GenerateLowSTests {
             + inputTransaction.getTxId() + "\", "
             + output.getIndex() + ", \""
             + scriptToString(output.getScriptPubKey()) + "\"]],\n"
-            + "\"" + Utils.HEX.encode(proposedTransaction.partialTx.unsafeBitcoinSerialize()) + "\", \""
+            + "\"" + proposedTransaction.partialTx.toHexString() + "\", \""
             + Script.VerifyFlag.P2SH.name() + "\"],");
 
         // Lastly a conventional high-S transaction with the LOW_S flag, for the tx_invalid.json set
@@ -136,7 +136,7 @@ public class GenerateLowSTests {
             + inputTransaction.getTxId() + "\", "
             + output.getIndex() + ", \""
             + scriptToString(output.getScriptPubKey()) + "\"]],\n"
-            + "\"" + Utils.HEX.encode(proposedTransaction.partialTx.unsafeBitcoinSerialize()) + "\", \""
+            + "\"" + proposedTransaction.partialTx.toHexString() + "\", \""
             + Script.VerifyFlag.P2SH.name() + "," + Script.VerifyFlag.LOW_S.name() + "\"],");
     }
 

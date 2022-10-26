@@ -116,7 +116,7 @@ public class BlockingClient implements MessageWriteTarget {
                 return;
             dbuf.put(readBuff, 0, read);
             // "flip" the buffer - setting the limit to the current position and setting position to 0
-            dbuf.flip();
+            ((Buffer) dbuf).flip();
             // Use connection.receiveBytes's return value as a double-check that it stopped reading at the right
             // location
             int bytesConsumed = connection.receiveBytes(dbuf);
@@ -143,11 +143,12 @@ public class BlockingClient implements MessageWriteTarget {
     }
 
     @Override
-    public synchronized void writeBytes(byte[] message) throws IOException {
+    public synchronized ListenableFuture writeBytes(byte[] message) throws IOException {
         try {
             OutputStream stream = socket.getOutputStream();
             stream.write(message);
             stream.flush();
+            return Futures.immediateFuture(null);
         } catch (IOException e) {
             log.error("Error writing message to connection, closing connection", e);
             closeConnection();
