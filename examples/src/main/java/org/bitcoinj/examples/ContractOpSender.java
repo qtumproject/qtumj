@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
+import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.store.LevelDBBlockStore;
@@ -28,7 +29,7 @@ public class ContractOpSender {
     }
 
     public static void main(String[] args) throws Exception {
-        NetworkParameters params = RegTestParams.get();
+        NetworkParameters params = TestNet3Params.get();
         try {
             // Import the private key to a fresh wallet.
             Wallet wallet = Wallet.createDeterministic(params, Script.ScriptType.P2PKH);

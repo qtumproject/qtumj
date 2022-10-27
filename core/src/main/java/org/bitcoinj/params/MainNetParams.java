@@ -19,10 +19,7 @@ package org.bitcoinj.params;
 
 import java.net.URI;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.HttpDiscovery;
 
 
@@ -35,12 +32,13 @@ public class MainNetParams extends AbstractQtumNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
-    private static final long GENESIS_TIME = 1231006505;
-    private static final long GENESIS_NONCE = 2083236893;
-    private static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
+    private static final long GENESIS_TIME = 1504695029L;
+    private static final long GENESIS_NONCE = 8026361;
+    private static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c");
 
     public MainNetParams() {
         super();
+        getGenesisBlock();
         id = ID_MAINNET;
 
         targetTimespan = TARGET_TIMESPAN;
@@ -85,17 +83,10 @@ public class MainNetParams extends AbstractQtumNetParams {
         majorityRejectBlockOutdated = MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MAINNET_MAJORITY_WINDOW;
 
-        genesisBlock.setDifficultyTarget(0x1f00ffffL);
-        genesisBlock.setTime(1504695029L);
-        genesisBlock.setNonce(8026361);
-
         id = ID_MAINNET;
         subsidyDecreaseBlockCount = 985500;
         spendableCoinbaseDepth = 500;
         reducedBlockTimeSpendableCoinbaseDepth = 2000;
-        String genesisHash = genesisBlock.getHashAsString();
-        checkState(genesisHash.equals("000075aef83cf2853580f8ae8ce6f8c3096cfa21d98334d6e3f95e5582ed986c"),
-                genesisHash);
 
         // This contains (at a minimum) the blocks which are not BIP30 compliant. BIP30 changed how duplicate
         // transactions are handled. Duplicated transactions could occur in the case where a coinbase had the same
@@ -187,6 +178,10 @@ public class MainNetParams extends AbstractQtumNetParams {
                 genesisBlock.setDifficultyTarget(Block.STANDARD_MAX_DIFFICULTY_TARGET);
                 genesisBlock.setTime(GENESIS_TIME);
                 genesisBlock.setNonce(GENESIS_NONCE);
+                genesisBlock.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
+                genesisBlock.setHashUtxoRoot(KeccakHash.of(new byte[] {(byte) 0x80})); // RLP("") is 0x80
+                genesisBlock.setStakePrevTxid(Sha256Hash.ZERO_HASH);
+                genesisBlock.setStakeOutputIndex(0xffffffffL);
                 checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
             }
         }

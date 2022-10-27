@@ -13,7 +13,6 @@ QtumJ is bitcoinj ported to the Qtum blockchain protocol. The bitcoinj library i
 * Java 8+ (needs Java 8 API or Android 6.0 API, compiles to Java 8 bytecode) and Gradle 4.4+ for the `core` module
 * Java 8+ and Gradle 4.4+ for `tools` and `examples`
 * Java 11+ and Gradle 4.10+ for the JavaFX-based `wallettemplate`
-* [Gradle](https://gradle.org/) - for building the project
 * [Google Protocol Buffers](https://github.com/google/protobuf) - for use with serialization and hardware communications
 
 ### Status
@@ -27,7 +26,7 @@ Features ported:
 * [x] Node syncing
 * [ ] Block generating
 * [x] Blockchain managing (partially finished)
-* [x] Creating and calling contracts
+* [x] Creating and calling tracts
 
 ### Getting started
 

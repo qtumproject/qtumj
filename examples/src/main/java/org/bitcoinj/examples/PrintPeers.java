@@ -16,12 +16,9 @@
 
 package org.bitcoinj.examples;
 
+import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Peer;
-import org.bitcoinj.core.PeerAddress;
-import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.NioClientManager;
@@ -57,6 +54,7 @@ public class PrintPeers {
 
     private static void printDNS() throws PeerDiscoveryException {
         long start = System.currentTimeMillis();
+        Context.getOrCreate(MainNetParams.get());
         DnsDiscovery dns = new DnsDiscovery(MainNetParams.get());
         dnsPeers = dns.getPeers(0, 10, TimeUnit.SECONDS);
         printPeers(dnsPeers);
@@ -79,6 +77,7 @@ public class PrintPeers {
 
         List<ListenableFuture<Void>> futures = new ArrayList<>();
         NioClientManager clientManager = new NioClientManager();
+        clientManager.startAsync();
         for (final InetAddress addr : addrs) {
             InetSocketAddress address = new InetSocketAddress(addr, params.getPort());
             final Peer peer = new Peer(params, new VersionMessage(params, 0),
@@ -88,6 +87,14 @@ public class PrintPeers {
             peer.addConnectedEventListener((p, peerCount) -> {
                 // Check the chain height it claims to have.
                 VersionMessage ver = peer.getPeerVersionMessage();
+                String hostAddress = address.getAddress().getHostAddress();
+                String msg = String.format(
+                        "\t%s:%d => %d",
+                        hostAddress,
+                        address.getPort(),
+                        peer.getVersionMessage().clientVersion
+                );
+                System.out.println(msg);
                 long nodeHeight = ver.bestHeight;
                 synchronized (lock) {
                     long diff = bestHeight[0] - nodeHeight;

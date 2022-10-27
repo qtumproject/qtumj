@@ -131,7 +131,7 @@ public class RegTestParams extends AbstractQtumNetParams {
                 genesisBlock.setHashUtxoRoot(KeccakHash.of(new byte[] {(byte) 0x80})); // RLP("") is 0x80
                 genesisBlock.setStakePrevTxid(Sha256Hash.ZERO_HASH);
                 genesisBlock.setStakeOutputIndex(0xffffffffL);
-                checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash: " + genesisBlock.getHash());
+                checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
             }
         }
         return genesisBlock;

@@ -17,18 +17,13 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.*;
+
 import java.math.BigInteger;
 import java.net.URI;
 import java.util.Date;
 
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.net.discovery.HttpDiscovery;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
@@ -42,12 +37,13 @@ public class TestNet3Params extends AbstractQtumNetParams {
     public static final int TESTNET_MAJORITY_WINDOW = 100;
     public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 75;
     public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 51;
-    private static final long GENESIS_TIME = 1296688602;
-    private static final long GENESIS_NONCE = 414098458;
-    private static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943");
+    private static final long GENESIS_TIME = 1504695029L;
+    private static final long GENESIS_NONCE = 7349697;
+    private static final Sha256Hash GENESIS_HASH = Sha256Hash.wrap("0000e803ee215c0684ca0d2f9220594d3f828617972aad66feb2ba51f5e14222");
 
     public TestNet3Params() {
         super();
+        getGenesisBlock();
         id = ID_TESTNET;
         packetMagic = 0x0d221506;
         interval = INTERVAL;
@@ -144,6 +140,10 @@ public class TestNet3Params extends AbstractQtumNetParams {
                 genesisBlock.setDifficultyTarget(Block.STANDARD_MAX_DIFFICULTY_TARGET);
                 genesisBlock.setTime(GENESIS_TIME);
                 genesisBlock.setNonce(GENESIS_NONCE);
+                genesisBlock.setHashStateRoot(Sha256Hash.wrap("e965ffd002cd6ad0e2dc402b8044de833e06b23127ea8c3d80aec91410771495"));
+                genesisBlock.setHashUtxoRoot(KeccakHash.of(new byte[] {(byte) 0x80})); // RLP("") is 0x80
+                genesisBlock.setStakePrevTxid(Sha256Hash.ZERO_HASH);
+                genesisBlock.setStakeOutputIndex(0xffffffffL);
                 checkState(genesisBlock.getHash().equals(GENESIS_HASH), "Invalid genesis hash");
             }
         }

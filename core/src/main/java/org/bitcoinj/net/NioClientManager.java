@@ -158,6 +158,7 @@ public class NioClientManager extends AbstractExecutionThreadService implements 
             selector.wakeup();
             return data.future;
         } catch (Throwable e) {
+            e.printStackTrace(System.out);
             return Futures.immediateFailedFuture(e);
         }
     }
