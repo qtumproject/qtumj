@@ -444,9 +444,10 @@ public class Peer extends PeerSocketHandler {
 
         // No further communication is possible until version handshake is complete.
         if (!(m instanceof VersionMessage || m instanceof VersionAck || m instanceof SendAddrV2Message
+                || m instanceof WitnessTransactionIdTransactionRelay
                 || (versionHandshakeFuture.isDone() && !versionHandshakeFuture.isCancelled())))
             throw new ProtocolException(
-                    "Received " + m.getClass().getSimpleName() + " before version handshake is complete.");
+                    "Received " + m.getClass().getSimpleName() + " before version handshake is complete." + m);
 
         if (m instanceof Ping) {
             processPing((Ping) m);
@@ -488,6 +489,8 @@ public class Peer extends PeerSocketHandler {
             // TODO: implement if necessary
         } else if (m instanceof FeeFilterMessage) {
             processFeeFilter((FeeFilterMessage) m);
+        } else if (m instanceof WitnessTransactionIdTransactionRelay) {
+            log.info("{}: Peer supports witness transaction id transaction relay", this);
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);
         }

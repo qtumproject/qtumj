@@ -78,6 +78,7 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(UTXOsMessage.class, "utxos");
         names.put(SendHeadersMessage.class, "sendheaders");
         names.put(FeeFilterMessage.class, "feefilter");
+        names.put(WitnessTransactionIdTransactionRelay.class, "wtxidrelay");
     }
 
     /**
@@ -266,6 +267,8 @@ public class BitcoinSerializer extends MessageSerializer {
             return new SendCmpctMessage(params, payloadBytes);
         } else if (command.equals("feefilter")) {
             return new FeeFilterMessage(params, payloadBytes, this, length);
+        } else if (command.equals("wtxidrelay")) {
+            return new WitnessTransactionIdTransactionRelay(params, payloadBytes);
         } else {
             return new UnknownMessage(params, command, payloadBytes);
         }

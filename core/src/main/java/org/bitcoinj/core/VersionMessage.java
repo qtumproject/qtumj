@@ -125,6 +125,7 @@ public class VersionMessage extends Message {
     @Override
     protected void parse() throws ProtocolException {
         clientVersion = (int) readUint32();
+        System.out.println("Parse: version: " + clientVersion);
         localServices = readUint64().longValue();
         time = readUint64().longValue();
         receivingAddr = new PeerAddress(params, payload, cursor, this, serializer.withProtocolVersion(0));

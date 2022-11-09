@@ -64,6 +64,10 @@ jar {
     manifest {
         attributes 'Automatic-Module-Name': moduleName
     }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it)}
+    }
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {

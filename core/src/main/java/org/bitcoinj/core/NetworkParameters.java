@@ -502,7 +502,7 @@ public abstract class NetworkParameters {
         BLOOM_FILTER_BIP111(70011), // BIP111
         WITNESS_VERSION(70012),
         FEEFILTER(70013), // BIP133
-        CURRENT(70020);
+        CURRENT(70021);
 
         private final int qtumProtocol;
 

@@ -10,6 +10,25 @@ dependencies {
     implementation 'org.fusesource.leveldbjni:leveldbjni-all:1.8'
 }
 
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'org.bitcoinj.examples.LogPeers'
+    }
+    // archiveClassifier = "all"
+    from {
+        configurations.compile.collect {
+            it.isDirectory() ?
+                    it : zipTree(it).matching { exclude "**/*.DSA", "**/*.SF"}
+        }
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ?
+                    it : zipTree(it).matching { exclude "**/*.DSA", "**/*.SF"}
+        }
+    }
+
+    with jar
+}
+
 sourceCompatibility = 1.8
 compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
